@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -56,19 +57,48 @@ export default function Chatbot() {
     setInput("");
     setLoading(true);
 
-    // Simulate AI response (will be replaced with actual Gemini AI integration)
-    setTimeout(() => {
-      const randomAdvisor = advisors[Math.floor(Math.random() * advisors.length)];
+    try {
+      // Prepare conversation history for the AI
+      const conversationHistory = messages.map((msg) => ({
+        role: msg.role,
+        content: msg.content,
+      }));
+
+      // Call the edge function
+      const { data, error } = await supabase.functions.invoke("ai-advisors", {
+        body: {
+          message: input,
+          conversationHistory,
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: `As the ${randomAdvisor.name}, I've analyzed your query. This is a placeholder response that will be replaced with actual Gemini AI integration. The multi-agent system will provide comprehensive insights from all 5 advisors.`,
-        advisor: randomAdvisor.name,
+        content: data.message,
+        advisor: data.advisor,
         timestamp: new Date(),
       };
+
       setMessages((prev) => [...prev, aiMessage]);
+    } catch (error: any) {
+      console.error("Error calling AI:", error);
+      
+      // Show error message in chat
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: error.message || "Sorry, I encountered an error. Please try again.",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
       setLoading(false);
-    }, 1500);
+    }
   };
 
   return (

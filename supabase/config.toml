@@ -1,1 +1,4 @@
 project_id = "ikljpiyfdsousydgzpcb"
+
+[functions.ai-advisors]
+verify_jwt = true
