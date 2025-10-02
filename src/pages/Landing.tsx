@@ -1,55 +1,13 @@
-import { useRef, Suspense, useState, useLayoutEffect } from "react";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { useRef, useState, useLayoutEffect } from "react";
+// react-three-fiber temporarily disabled while fixing runtime issue
 import { motion, useScroll, useTransform, useSpring } from "framer-motion";
-import * as THREE from "three";
 import { Link } from "react-router-dom";
 import bento1 from "@/assets/bento1.jpg";
 import bento2 from "@/assets/bento2.jpg";
 import aiBackground from "@/assets/ai-background.jpg";
 
-const FloatingElement = ({ position, rotation, scale = 1, color, shape = "sphere" }: any) => {
-  const meshRef = useRef<THREE.Mesh>(null);
-
-  useFrame((state) => {
-    if (meshRef.current) {
-      meshRef.current.rotation.x += 0.005;
-      meshRef.current.rotation.y += 0.01;
-      meshRef.current.position.y += Math.sin(state.clock.elapsedTime + position[0]) * 0.002;
-    }
-  });
-
-  return (
-    <group position={position} rotation={rotation} scale={scale}>
-      <mesh ref={meshRef}>
-        {shape === "sphere" && <sphereGeometry args={[1, 32, 32]} />}
-        {shape === "torus" && <torusGeometry args={[1, 0.4, 16, 100]} />}
-        {shape === "cylinder" && <cylinderGeometry args={[0.8, 0.8, 2, 32]} />}
-        <meshStandardMaterial color={color} metalness={0.3} roughness={0.2} transparent opacity={0.9} />
-      </mesh>
-    </group>
-  );
-};
-
-const HeroScene = () => {
-  const { mouse } = useThree();
-  const groupRef = useRef<THREE.Group>(null);
-
-  useFrame(() => {
-    if (groupRef.current) {
-      groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, mouse.x * 0.1, 0.05);
-      groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, -mouse.y * 0.1, 0.05);
-    }
-  });
-
-  return (
-    <group ref={groupRef}>
-      <FloatingElement position={[4, 2, -2]} color="#1e40af" scale={1.5} shape="sphere" />
-      <FloatingElement position={[6, -1, -1]} color="#3b82f6" scale={1.2} shape="torus" />
-      <FloatingElement position={[-4, 1, -3]} color="#60a5fa" scale={1} shape="cylinder" />
-      <FloatingElement position={[2, -2, 0]} color="#93c5fd" scale={0.8} shape="sphere" />
-    </group>
-  );
-};
+// 3D components removed temporarily to prevent runtime crash while we align dependencies
+// Placeholder reserved for future re-enable of react-three-fiber scene
 
 const Header = () => {
   const [isFeaturesOpen, setIsFeaturesOpen] = useState(false);
@@ -212,16 +170,8 @@ export default function Landing() {
           </section>
 
           <section className="py-20 bg-background relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-1/2 h-full">
-              <Canvas camera={{ position: [0, 0, 6], fov: 50 }}>
-                <ambientLight intensity={0.6} />
-                <pointLight position={[5, 5, 5]} intensity={1} />
-                <Suspense fallback={null}>
-                  <FloatingElement position={[2, 1, 0]} color="#3b82f6" scale={1.2} shape="sphere" />
-                  <FloatingElement position={[0, -1, -1]} color="#1e40af" scale={0.8} shape="torus" />
-                  <FloatingElement position={[-1, 2, 1]} color="#60a5fa" scale={1} shape="cylinder" />
-                </Suspense>
-              </Canvas>
+            <div className="absolute top-0 right-0 w-1/2 h-full pointer-events-none">
+              <div className="w-full h-full gradient-blue opacity-40 blur-3xl" />
             </div>
             <div className="container mx-auto px-20 relative z-10">
               <div className="max-w-2xl">
