@@ -16,6 +16,9 @@ import NotFound from "./pages/NotFound";
 import Overview from "./pages/dashboard/Overview";
 import Onboarding from "./pages/Onboarding";
 import GrowthPlan from "./pages/dashboard/GrowthPlan";
+import CustomerDiscovery from "./pages/dashboard/CustomerDiscovery";
+import DecisionJournal from "./pages/dashboard/DecisionJournal";
+import FounderPulse from "./pages/dashboard/FounderPulse";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +39,9 @@ const App = () => (
             <Route path="market-analysis" element={<MarketAnalysis />} />
             <Route path="product-ideas" element={<ProductIdeas />} />
             <Route path="growth-plan" element={<GrowthPlan />} />
+            <Route path="customer-discovery" element={<CustomerDiscovery />} />
+            <Route path="decision-journal" element={<DecisionJournal />} />
+            <Route path="founder-pulse" element={<FounderPulse />} />
             <Route path="profile" element={<Profile />} />
             <Route path="settings" element={<Settings />} />
           </Route>

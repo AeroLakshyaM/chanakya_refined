@@ -3,7 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Activity, BarChart3, Bot, ChevronLeft, ChevronRight, Lightbulb, Loader2, LogOut, Menu, Settings, Target, Users, UserRound, X } from "lucide-react";
+import { Activity, BarChart3, Bot, ChevronLeft, ChevronRight, Lightbulb, Loader2, LogOut, Menu, Settings, Target, Users, UserRound, X, SearchCheck, BookOpenCheck, Gauge } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import BrandLogo from "@/components/BrandLogo";
@@ -14,6 +14,9 @@ const navItems = [
   { path: "/dashboard/market-analysis", label: "Market Analysis", icon: Activity },
   { path: "/dashboard/product-ideas", label: "Product Ideas", icon: Lightbulb },
   { path: "/dashboard/growth-plan", label: "Growth Plan", icon: Target },
+  { path: "/dashboard/customer-discovery", label: "Customer Discovery", icon: SearchCheck },
+  { path: "/dashboard/decision-journal", label: "Decision Journal", icon: BookOpenCheck },
+  { path: "/dashboard/founder-pulse", label: "Founder Pulse", icon: Gauge },
   { path: "/dashboard/meeting-room", label: "Advisor Sessions", icon: Users },
 ];
 const utilityItems = [

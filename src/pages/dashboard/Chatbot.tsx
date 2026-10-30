@@ -3,10 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Bot, User, Sparkles, ArrowUpRight, Check, LockKeyhole, MessageSquareText } from "lucide-react";
+import { Send, Bot, User, Sparkles, ArrowUpRight, Check, LockKeyhole, MessageSquareText, Plus, Clock3 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import PageHeader from "@/components/dashboard/PageHeader";
+import FormattedAnswer from "@/components/dashboard/FormattedAnswer";
 
 type Message = {
   id: string;
@@ -15,6 +16,7 @@ type Message = {
   advisor?: string;
   timestamp: Date;
 };
+type Conversation = { id: string; title: string | null; updated_at: string };
 
 const botPersonas = [
   { name: "Business Strategist", color: "", icon: "BS", description: "Strategic planning & growth" },
@@ -35,6 +37,7 @@ export default function Chatbot() {
   const [businessContext, setBusinessContext] = useState("");
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [conversationReady, setConversationReady] = useState(false);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -64,14 +67,13 @@ export default function Chatbot() {
         ].filter(([, value]) => Boolean(value)).map(([label, value]) => `${label}: ${value}`).join("\n"));
       }
       
-      // Resume the latest conversation so saved messages are still visible after reload.
-      const { data: existingConversation, error: lookupError } = await supabase
+      // Keep every conversation in history and reopen the most recently active one.
+      const { data: history, error: lookupError } = await supabase
         .from('chat_conversations')
-        .select('id')
+        .select('id,title,updated_at')
         .eq('user_id', user.id)
         .order('updated_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .limit(100);
 
       if (lookupError) {
         console.error('Error finding saved conversation:', lookupError);
@@ -83,13 +85,14 @@ export default function Chatbot() {
         return;
       }
 
-      let activeConversationId = existingConversation?.id;
+      let activeConversationId = history?.[0]?.id;
+      setConversations(history || []);
       let restoredConversationHasMessages = false;
       if (!activeConversationId) {
         const { data: conv, error: createError } = await supabase
           .from('chat_conversations')
           .insert({ user_id: user.id, title: 'New Conversation' })
-          .select('id')
+          .select('id,title,updated_at')
           .single();
 
         if (createError || !conv) {
@@ -98,6 +101,7 @@ export default function Chatbot() {
           return;
         }
         activeConversationId = conv.id;
+        setConversations([conv]);
       } else {
         const { data: savedMessages, error: messagesError } = await supabase
           .from('chat_messages')
@@ -132,7 +136,7 @@ export default function Chatbot() {
       setConversationReady(true);
       
       // Add welcome message
-      if (!existingConversation || !restoredConversationHasMessages) setMessages([{
+      if (!history?.length || !restoredConversationHasMessages) setMessages([{
           id: "1",
           role: "assistant",
           content: "Welcome. Choose a specialist, share the context behind your decision, and I’ll help you work through the options and next steps.",
@@ -142,6 +146,42 @@ export default function Chatbot() {
 
     initConversation();
   }, [toast]);
+
+  const createNewChat = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data, error } = await supabase.from("chat_conversations")
+      .insert({ user_id: user.id, title: "New Conversation" })
+      .select("id,title,updated_at").single();
+    if (error || !data) {
+      toast({ title: "Could not start a new chat", description: error?.message, variant: "destructive" });
+      return;
+    }
+    setConversations((current) => [data, ...current]);
+    setConversationId(data.id);
+    setMessages([{ id: `welcome-${data.id}`, role: "assistant", content: "A fresh conversation, ready when you are. Choose an advisor and tell me what you’re working through.", timestamp: new Date() }]);
+    setSelectedBot("");
+    setConversationReady(true);
+  };
+
+  const openConversation = async (conversation: Conversation) => {
+    if (conversation.id === conversationId) return;
+    setConversationReady(false);
+    const { data, error } = await supabase.from("chat_messages")
+      .select("id,role,content,advisor,created_at").eq("conversation_id", conversation.id)
+      .order("created_at", { ascending: true }).limit(200);
+    if (error) {
+      toast({ title: "Could not open this chat", description: error.message, variant: "destructive" });
+      setConversationReady(true);
+      return;
+    }
+    const restored = (data || []).map((message) => ({ id: message.id, role: message.role as Message["role"], content: message.content, advisor: message.advisor || undefined, timestamp: new Date(message.created_at) }));
+    setConversationId(conversation.id);
+    setMessages(restored.length ? restored : [{ id: `welcome-${conversation.id}`, role: "assistant", content: "Welcome back. Pick up where you left off, or start a fresh conversation.", timestamp: new Date() }]);
+    const advisor = [...restored].reverse().find((message) => message.advisor)?.advisor;
+    setSelectedBot(advisor && botPersonas.some((bot) => bot.name === advisor) ? advisor : "");
+    setConversationReady(true);
+  };
 
   useEffect(() => {
     const viewport = scrollRef.current?.querySelector<HTMLDivElement>("[data-radix-scroll-area-viewport]");
@@ -213,6 +253,8 @@ export default function Chatbot() {
       };
 
       setMessages((prev) => [...prev, aiMessage]);
+      const { data: refreshedHistory } = await supabase.from("chat_conversations").select("id,title,updated_at").order("updated_at", { ascending: false }).limit(100);
+      if (refreshedHistory) setConversations(refreshedHistory);
     } catch (error: any) {
       console.error("Error calling AI:", error);
       
@@ -244,6 +286,11 @@ export default function Chatbot() {
 
     <div className="grid min-w-0 gap-5 xl:grid-cols-[260px_minmax(0,1fr)]">
       <aside className="chat-advisors min-w-0 border border-border bg-card p-4 sm:p-5">
+        <div className="mb-4 flex items-center justify-between gap-2"><div><p className="text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground">Your space</p><h2 className="mt-1 text-lg font-medium tracking-tight">Chats</h2></div><button type="button" onClick={() => void createNewChat()} className="inline-flex h-9 shrink-0 items-center gap-1.5 border border-foreground bg-foreground px-3 text-xs text-background transition-colors hover:bg-primary hover:text-primary-foreground"><Plus size={14} />New chat</button></div>
+        <div className="mb-5 max-h-40 space-y-1 overflow-y-auto" aria-label="Chat history">
+          {conversations.map((conversation) => <button key={conversation.id} type="button" onClick={() => void openConversation(conversation)} className={`flex w-full items-center gap-2 px-2.5 py-2 text-left text-xs transition-colors ${conversation.id === conversationId ? "bg-secondary text-foreground" : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"}`}><Clock3 size={13} className="shrink-0" /><span className="min-w-0 flex-1 truncate">{conversation.title || "New Conversation"}</span></button>)}
+          {!conversations.length && <p className="px-2 py-2 text-xs text-muted-foreground">Your saved chats will appear here.</p>}
+        </div>
         <div className="mb-4 flex items-end justify-between"><div><p className="text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground">Choose a lens</p><h2 className="mt-1 text-lg font-medium tracking-tight">Your advisors</h2></div><span className="text-[10px] tabular-nums text-muted-foreground">08</span></div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-1">
           {botPersonas.map((bot) => {
@@ -279,7 +326,9 @@ export default function Chatbot() {
               <div className={`min-w-0 max-w-[calc(100%-2.75rem)] sm:max-w-[82%] ${message.role === "user" ? "order-first" : ""}`}>
                 <div className={`min-w-0 break-words [overflow-wrap:anywhere] px-4 py-3.5 sm:px-5 ${message.role === "user" ? "bg-foreground text-background" : "border border-border bg-card text-foreground"}`}>
                   {message.advisor && <Badge variant="secondary" className="mb-2 rounded-none bg-secondary text-[10px]">{message.advisor}</Badge>}
-                  <p className="whitespace-pre-wrap break-words text-sm leading-7 [overflow-wrap:anywhere]">{message.content}</p>
+                  {message.role === "assistant"
+                    ? <FormattedAnswer content={message.content} />
+                    : <p className="whitespace-pre-wrap break-words text-sm leading-7 [overflow-wrap:anywhere]">{message.content}</p>}
                 </div>
                 <p className={`mt-1.5 px-1 text-[10px] text-muted-foreground ${message.role === "user" ? "text-right" : ""}`}>{message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</p>
               </div>
