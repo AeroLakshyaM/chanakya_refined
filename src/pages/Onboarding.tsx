@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft, ArrowRight, BarChart3, Building2, Check, Compass, Lightbulb, Loader2, Rocket, Sparkles, Target, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import BrandLogo from "@/components/BrandLogo";
 
 type OnboardingProfile = {
   full_name: string | null;
@@ -158,7 +159,7 @@ export default function Onboarding() {
 
   return <main className="min-h-screen overflow-hidden bg-background text-foreground">
     <header className="relative z-10 mx-auto flex max-w-[1440px] items-center justify-between px-5 py-5 md:px-10">
-      <Link to="/" className="text-base font-medium tracking-tight">Chanakya<span className="text-primary">.</span></Link>
+      <BrandLogo className="h-14 w-[84px]" />
       <button onClick={skip} disabled={saving} className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline disabled:opacity-50">I’ll do this later</button>
     </header>
 

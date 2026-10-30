@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { ArrowDown, ArrowRight, ArrowUpRight, BarChart3, Bot, Lightbulb, Users } from "lucide-react";
+import BrandLogo from "@/components/BrandLogo";
 
 const disciplines = [
   { no: "01", name: "AI advisors", detail: "Get grounded perspectives across strategy, finance, operations, product, and more.", icon: Bot },
@@ -11,7 +12,7 @@ const disciplines = [
 export default function Landing() {
   return <div className="min-h-screen bg-background text-foreground">
     <header className="mx-auto flex max-w-[1440px] items-center justify-between border-b border-border px-5 py-5 md:px-10">
-      <Link to="/" className="text-base font-medium tracking-tight">Chanakya<span className="text-primary">.</span></Link>
+      <BrandLogo className="h-14 w-[84px]" />
       <div className="hidden items-center gap-8 text-sm text-muted-foreground md:flex"><a className="editorial-link pb-1" href="#approach">Approach</a><a className="editorial-link pb-1" href="#tools">Tools</a><a className="editorial-link pb-1" href="#about">About</a></div>
       <Link to="/auth" className="flex items-center gap-2 text-sm font-medium editorial-link pb-1">Sign in <ArrowUpRight size={15} /></Link>
     </header>

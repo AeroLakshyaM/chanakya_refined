@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Activity, BarChart3, Bot, ChevronLeft, ChevronRight, Lightbulb, Loader2, LogOut, Menu, Settings, Users, UserRound, X } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import BrandLogo from "@/components/BrandLogo";
 
 const navItems = [
   { path: "/dashboard", label: "Overview", icon: BarChart3, end: true },
@@ -74,10 +75,7 @@ export default function DashboardLayout() {
       {mobileOpen && <button aria-label="Close navigation" onClick={() => setMobileOpen(false)} className="fixed inset-0 z-40 bg-black/30 md:hidden" />}
       <aside className={`${mobileOpen ? "translate-x-0" : "-translate-x-full"} fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-border bg-background transition-transform md:static md:z-auto md:translate-x-0 ${collapsed ? "md:w-[84px]" : "md:w-64"}`}>
         <div className="flex h-[76px] items-center justify-between border-b border-border px-5">
-          <a href="/dashboard" className="flex items-center gap-3" aria-label="Chanakya home">
-            <span className="grid h-9 w-9 place-items-center bg-foreground text-base font-semibold text-background">C<span className="text-primary">.</span></span>
-            {!collapsed && <span className="text-lg font-medium tracking-tight">chanakya</span>}
-          </a>
+          <BrandLogo to="/dashboard" className={collapsed ? "h-11 w-[66px]" : "h-12 w-[72px]"} />
           <button className="hidden rounded-md p-2 text-muted-foreground hover:bg-muted md:block" aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} onClick={() => setCollapsed(!collapsed)}>{collapsed ? <ChevronRight size={17} /> : <ChevronLeft size={17} />}</button>
           <button className="rounded-md p-2 md:hidden" aria-label="Close navigation" onClick={() => setMobileOpen(false)}><X size={18} /></button>
         </div>

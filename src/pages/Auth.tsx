@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import BrandLogo from "@/components/BrandLogo";
 
 const messageFor = (error: unknown) => error instanceof Error ? error.message : "Something went wrong. Please try again.";
 
@@ -111,7 +112,7 @@ export default function Auth() {
 
   return (
     <main className="page-enter min-h-screen bg-background px-5 py-8 md:px-10">
-      <header className="mx-auto flex max-w-[1440px] items-center justify-between"><Link to="/" className="text-base font-medium tracking-tight">Chanakya<span className="text-primary">.</span></Link><Link to="/" className="editorial-link flex items-center gap-2 pb-1 text-sm text-muted-foreground"><ArrowLeft size={15} /> Back to home</Link></header>
+      <header className="mx-auto flex max-w-[1440px] items-center justify-between"><BrandLogo className="h-14 w-[84px]" /><Link to="/" className="editorial-link flex items-center gap-2 pb-1 text-sm text-muted-foreground"><ArrowLeft size={15} /> Back to home</Link></header>
       <div className="mx-auto grid min-h-[calc(100vh-100px)] max-w-[1180px] items-center gap-12 py-12 md:grid-cols-2 md:gap-20">
         <section className="hidden md:block"><p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Your growth workspace</p><h1 className="mt-6 text-6xl font-medium leading-[0.92] tracking-[-0.06em] lg:text-7xl">A clearer way<br />to move <span className="text-primary">forward.</span></h1><p className="mt-6 max-w-md text-base leading-relaxed text-muted-foreground">Sign in to continue building with thoughtful tools and specialist AI advisors.</p><div className="mt-14 border-t border-border pt-5 text-sm text-muted-foreground">Strategy · Product · Market · Operations</div></section>
         <section className="mx-auto w-full max-w-md">
