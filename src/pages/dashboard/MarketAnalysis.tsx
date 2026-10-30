@@ -46,7 +46,7 @@ export default function MarketAnalysis() {
       if (sessionError || !session?.access_token) throw new Error("Please sign in again before generating a market brief.");
       const prompt = `Create an initial market strategy brief using only the information supplied below. Do not invent market sizes, growth rates, competitor facts, or citations. Mark unknowns as assumptions and end with the most useful validation steps.\n\nCompany or product: ${company}\nMarket: ${market}\nContext: ${context || "No additional context supplied."}\n\nUse these headings: Market framing; Likely customer segments; Competitors to investigate; Key assumptions; Three practical validation steps; Questions for the team.`;
       const { data, error } = await supabase.functions.invoke("ai-advisors", {
-        body: { message: prompt, conversationHistory: [], selectedBot: "Business Strategist", businessContext: context },
+        body: { message: prompt, conversationHistory: [], selectedBot: "Business Strategist", businessContext: context, provider: "nvidia" },
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       if (error) {
@@ -66,7 +66,7 @@ export default function MarketAnalysis() {
   };
 
   return <div>
-    <PageHeader eyebrow="Explore opportunity" title="Market analysis" description="Build a first-pass market brief from your company context. The advisor will separate assumptions from what your team still needs to validate." />
+    <PageHeader eyebrow="Explore opportunity" title="Market analysis" description="Build a first-pass market brief with NVIDIA Nemotron from your company context. The brief separates assumptions from what your team still needs to validate." />
     <div className="grid gap-6 xl:grid-cols-12">
       <form onSubmit={runAnalysis} className="space-y-6 border border-border bg-card p-5 sm:p-7 xl:col-span-5">
         <div className="flex items-start gap-3 border-b border-border pb-5"><span className="grid h-9 w-9 shrink-0 place-items-center bg-secondary"><Compass size={17} /></span><div><h2 className="text-base font-medium">Set the context</h2><p className="mt-1 text-xs leading-relaxed text-muted-foreground">A sharper brief starts with a specific market and customer.</p></div></div>

@@ -26,11 +26,12 @@ serve(async (req: Request) => {
 
   let failureStatus = 500;
   try {
-    const { message, conversationHistory, selectedBot, conversationId, businessContext } = await req.json();
+    const { message, conversationHistory, selectedBot, conversationId, businessContext, provider } = await req.json();
     
     const NVIDIA_API_KEY = Deno.env.get("NVIDIA_API_KEY");
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-    const AI_PROVIDER = (Deno.env.get("AI_PROVIDER") || (NVIDIA_API_KEY ? "nvidia" : "gemini")).toLowerCase();
+    const configuredProvider = (Deno.env.get("AI_PROVIDER") || (NVIDIA_API_KEY ? "nvidia" : "gemini")).toLowerCase();
+    const AI_PROVIDER = provider === "nvidia" || provider === "gemini" ? provider : configuredProvider;
     const GEMINI_MODEL = Deno.env.get("GEMINI_MODEL") || "gemini-3.8-flash";
     const NVIDIA_MODEL = Deno.env.get("NVIDIA_MODEL") || "nvidia/nemotron-3-ultra-550b-a55b";
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
