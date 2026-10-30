@@ -111,6 +111,11 @@ export default function Chatbot() {
     setLoading(true);
 
     try {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session?.access_token) {
+        throw new Error("Your session has expired. Please sign in again.");
+      }
+
       // Prepare conversation history for the AI
       const conversationHistory = messages.map((msg) => ({
         role: msg.role,
@@ -126,9 +131,15 @@ export default function Chatbot() {
           conversationId,
           userId
         },
+        headers: { Authorization: `Bearer ${session.access_token}` },
       });
 
       if (error) {
+        const context = (error as { context?: unknown }).context;
+        if (context instanceof Response) {
+          const payload = await context.clone().json().catch(() => null);
+          if (typeof payload?.error === "string") throw new Error(payload.error);
+        }
         throw error;
       }
 

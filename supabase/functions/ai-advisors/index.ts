@@ -24,6 +24,7 @@ serve(async (req: Request) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let failureStatus = 500;
   try {
     const { message, conversationHistory, selectedBot, conversationId } = await req.json();
     
@@ -32,6 +33,34 @@ serve(async (req: Request) => {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
+
+    if (typeof message !== "string" || !message.trim()) {
+      failureStatus = 400;
+      throw new Error("A message is required.");
+    }
+
+    // Authenticate before spending a Gemini request. Passing the token explicitly
+    // avoids relying on supabase-js to infer it from the global header.
+    let authenticatedUser: { id: string } | null = null;
+    if (conversationId) {
+      const authorization = req.headers.get("Authorization");
+      const accessToken = authorization?.match(/^Bearer\s+(.+)$/i)?.[1];
+      if (!accessToken) {
+        failureStatus = 401;
+        throw new Error("Your session is missing. Please sign in again.");
+      }
+      if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+        throw new Error("Supabase authentication is not configured for this function.");
+      }
+
+      const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      const { data, error } = await authClient.auth.getUser(accessToken);
+      if (error || !data.user) {
+        failureStatus = 401;
+        throw new Error("Your session could not be verified. Please sign in again.");
+      }
+      authenticatedUser = data.user;
+    }
     
     if (!GEMINI_API_KEY) {
       throw new Error("GEMINI_API_KEY is not configured");
@@ -43,7 +72,7 @@ serve(async (req: Request) => {
     const systemPrompt = botPersonas[selectedBotName as keyof typeof botPersonas];
 
     // Prepare messages for Gemini API
-    const conversationText = conversationHistory
+    const conversationText = (Array.isArray(conversationHistory) ? conversationHistory : [])
       .map((msg: any) => `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`)
       .join('\n');
     
@@ -83,20 +112,10 @@ serve(async (req: Request) => {
     const aiMessage = data.candidates[0].content.parts[0].text;
 
     // Save conversation to Supabase if conversationId provided
-    if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY && SUPABASE_ANON_KEY && conversationId) {
-      const authorization = req.headers.get("Authorization");
-      if (!authorization?.startsWith("Bearer ")) {
-        throw new Error("A valid signed-in session is required to save this conversation.");
+    if (conversationId) {
+      if (!authenticatedUser || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+        throw new Error("Conversation storage is not configured for this function.");
       }
-
-      const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-        global: { headers: { Authorization: authorization } },
-      });
-      const { data: { user: authenticatedUser }, error: authError } = await authClient.auth.getUser();
-      if (authError || !authenticatedUser) {
-        throw new Error("Your session could not be verified. Please sign in again.");
-      }
-
       const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
       const { data: conversation, error: conversationError } = await supabase
         .from('chat_conversations')
@@ -109,20 +128,22 @@ serve(async (req: Request) => {
       if (!conversation) throw new Error("Conversation not found for this account.");
       
       // Save user message
-      await supabase.from('chat_messages').insert({
+      const { error: userMessageError } = await supabase.from('chat_messages').insert({
         conversation_id: conversationId,
         role: 'user',
         content: message,
         advisor: selectedBotName
       });
+      if (userMessageError) throw userMessageError;
 
       // Save AI message
-      await supabase.from('chat_messages').insert({
+      const { error: assistantMessageError } = await supabase.from('chat_messages').insert({
         conversation_id: conversationId,
         role: 'assistant',
         content: aiMessage,
         advisor: selectedBotName
       });
+      if (assistantMessageError) throw assistantMessageError;
 
       // Update conversation timestamp
       await supabase
@@ -146,7 +167,7 @@ serve(async (req: Request) => {
     return new Response(
       JSON.stringify({ error: error.message || "An error occurred" }),
       { 
-        status: 500,
+        status: failureStatus,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       }
     );

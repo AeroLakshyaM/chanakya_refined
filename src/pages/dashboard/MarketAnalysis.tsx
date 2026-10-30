@@ -21,9 +21,21 @@ export default function MarketAnalysis() {
     setLoading(true);
     setAnalysis("");
     try {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session?.access_token) throw new Error("Please sign in again before generating a market brief.");
       const prompt = `Create an initial market strategy brief using only the information supplied below. Do not invent market sizes, growth rates, competitor facts, or citations. Mark unknowns as assumptions and end with the most useful validation steps.\n\nCompany or product: ${company}\nMarket: ${market}\nContext: ${context || "No additional context supplied."}\n\nUse these headings: Market framing; Likely customer segments; Competitors to investigate; Key assumptions; Three practical validation steps; Questions for the team.`;
-      const { data, error } = await supabase.functions.invoke("ai-advisors", { body: { message: prompt, conversationHistory: [], selectedBot: "Business Strategist" } });
-      if (error) throw error;
+      const { data, error } = await supabase.functions.invoke("ai-advisors", {
+        body: { message: prompt, conversationHistory: [], selectedBot: "Business Strategist" },
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (error) {
+        const response = (error as { context?: unknown }).context;
+        if (response instanceof Response) {
+          const payload = await response.clone().json().catch(() => null);
+          if (typeof payload?.error === "string") throw new Error(payload.error);
+        }
+        throw error;
+      }
       if (!data?.message) throw new Error("The advisor returned an empty response. Please try again.");
       setAnalysis(data.message);
     } catch (error: unknown) {
