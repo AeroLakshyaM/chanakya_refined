@@ -21,6 +21,7 @@ const tools = [
   { title: "AI advisors", description: "Talk through a decision with a specialist who knows your context.", path: "/dashboard/chatbot", icon: Bot, eyebrow: "Think it through" },
   { title: "Market analysis", description: "Frame your market, audience, and the competition to investigate.", path: "/dashboard/market-analysis", icon: BarChart3, eyebrow: "Find the signal" },
   { title: "Product ideas", description: "Capture opportunities and turn them into a focused backlog.", path: "/dashboard/product-ideas", icon: Lightbulb, eyebrow: "Shape what’s next" },
+  { title: "Growth plan", description: "Turn your 90-day goal into actions and learn from the results.", path: "/dashboard/growth-plan", icon: Target, eyebrow: "Move with intent" },
   { title: "Advisor sessions", description: "Explore a hard question from several specialist angles.", path: "/dashboard/meeting-room", icon: Users, eyebrow: "See every angle" },
 ];
 
@@ -32,7 +33,7 @@ const emptyProfile: WorkspaceProfile = {
 
 export default function Overview() {
   const [profile, setProfile] = useState<WorkspaceProfile>(emptyProfile);
-  const [activity, setActivity] = useState<{ conversations: number | null; ideas: number | null }>({ conversations: null, ideas: null });
+  const [activity, setActivity] = useState<{ conversations: number | null; ideas: number | null; actions: number | null }>({ conversations: null, ideas: null, actions: null });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -44,12 +45,14 @@ export default function Overview() {
         supabase.from("profiles").select("full_name,company_name,company_type,company_stage,industry,product_or_service,target_customer,primary_goal,biggest_challenge,team_size,monthly_revenue_range").eq("user_id", user.id).maybeSingle(),
         supabase.from("chat_conversations").select("id", { count: "exact", head: true }).eq("user_id", user.id),
         supabase.from("product_ideas").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+        supabase.from("growth_actions").select("id", { count: "exact", head: true }).eq("user_id", user.id),
       ]);
       if (!active) return;
       if (profileResult.data) setProfile({ ...emptyProfile, ...profileResult.data });
       setActivity({
         conversations: conversationsResult.error ? null : conversationsResult.count ?? 0,
         ideas: ideasResult.error ? null : ideasResult.count ?? 0,
+        actions: actionsResult.error ? null : actionsResult.count ?? 0,
       });
       setLoading(false);
     };
@@ -71,10 +74,11 @@ export default function Overview() {
 
     <section aria-label="Your starting signals">
       <div className="mb-4 flex items-end justify-between"><div><p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Your starting signals</p><h2 className="mt-2 text-2xl font-medium tracking-tight">A live read on your workspace</h2></div><Link to="/dashboard/profile" className="editorial-link hidden items-center gap-1 pb-1 text-xs sm:inline-flex">Edit company context <ArrowUpRight size={14} /></Link></div>
-      <div className="grid border-l border-t border-border sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid border-l border-t border-border sm:grid-cols-2 xl:grid-cols-5">
         <SignalCard label="North star · next 90 days" value={profile.primary_goal || "Choose a goal"} icon={<Target size={17} />} detail={profile.biggest_challenge ? `Current knot: ${profile.biggest_challenge}` : "Your chosen priority"} />
         <SignalCard label="Advisor conversations" value={loading ? "…" : String(activity.conversations ?? "—")} icon={<MessageSquareText size={17} />} detail="Counted from conversations saved here" />
         <SignalCard label="Ideas in your backlog" value={loading ? "…" : String(activity.ideas ?? "—")} icon={<Lightbulb size={17} />} detail="Saved product opportunities" />
+        <SignalCard label="Growth actions" value={loading ? "…" : String(activity.actions ?? "—")} icon={<Target size={17} />} detail="Steps in your founder plan" />
         <SignalCard label="Company stage" value={profile.company_stage || "Add your stage"} icon={<BarChart3 size={17} />} detail={profile.team_size ? `Team size · ${profile.team_size} (your estimate)` : (profile.industry || "Your chosen stage")} />
       </div>
       {profile.monthly_revenue_range && <p className="mt-3 text-xs text-muted-foreground">Revenue range is your self-reported estimate ({profile.monthly_revenue_range}); it is not connected or verified.</p>}
@@ -90,7 +94,7 @@ export default function Overview() {
       <div className="bg-foreground p-6 text-background sm:p-8 lg:col-span-7"><p className="text-xs font-medium uppercase tracking-[0.16em] text-background/55">A useful place to begin</p><h2 className="mt-3 max-w-xl text-3xl font-medium leading-tight tracking-[-0.04em]">{profile.primary_goal ? `Let’s make progress on “${profile.primary_goal.toLowerCase()}.”` : "Turn an open question into forward motion."}</h2><p className="mt-4 max-w-xl text-sm leading-relaxed text-background/65">Your advisors have your company context. Bring the decision on your mind and work toward one clear next step.</p><Link to="/dashboard/chatbot" className="mt-7 inline-flex h-11 items-center gap-3 bg-background px-4 text-sm font-medium text-foreground transition-colors hover:bg-primary">Talk it through <ArrowRight size={15} className="text-primary" /></Link></div>
     </section>
 
-    <section><div className="mb-5"><p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">The workspace</p><h2 className="mt-2 text-2xl font-medium tracking-tight">Tools for the work ahead</h2></div><div className="grid border-l border-t border-border sm:grid-cols-2 lg:grid-cols-4">{tools.map(({ title, description, path, icon: Icon, eyebrow }) => <Link key={title} to={path} className="group flex min-h-[180px] flex-col border-b border-r border-border bg-background p-5 transition-colors hover:bg-card sm:p-6"><div className="flex items-center justify-between"><span className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">{eyebrow}</span><ArrowUpRight size={16} className="text-muted-foreground transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-primary" /></div><div className="mt-auto pt-8"><div className="flex items-center gap-2.5"><Icon size={18} strokeWidth={1.7} className="text-primary" /><h3 className="text-lg font-medium tracking-tight">{title}</h3></div><p className="mt-2 text-sm leading-relaxed text-muted-foreground">{description}</p></div></Link>)}</div></section>
+    <section><div className="mb-5"><p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">The workspace</p><h2 className="mt-2 text-2xl font-medium tracking-tight">Tools for the work ahead</h2></div><div className="grid border-l border-t border-border sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">{tools.map(({ title, description, path, icon: Icon, eyebrow }) => <Link key={title} to={path} className="group flex min-h-[180px] flex-col border-b border-r border-border bg-background p-5 transition-colors hover:bg-card sm:p-6"><div className="flex items-center justify-between"><span className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">{eyebrow}</span><ArrowUpRight size={16} className="text-muted-foreground transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-primary" /></div><div className="mt-auto pt-8"><div className="flex items-center gap-2.5"><Icon size={18} strokeWidth={1.7} className="text-primary" /><h3 className="text-lg font-medium tracking-tight">{title}</h3></div><p className="mt-2 text-sm leading-relaxed text-muted-foreground">{description}</p></div></Link>)}</div></section>
   </div>;
 }
 

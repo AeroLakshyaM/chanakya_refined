@@ -15,6 +15,7 @@ import Settings from "./pages/dashboard/Settings";
 import NotFound from "./pages/NotFound";
 import Overview from "./pages/dashboard/Overview";
 import Onboarding from "./pages/Onboarding";
+import GrowthPlan from "./pages/dashboard/GrowthPlan";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="meeting-room" element={<MeetingRoom />} />
             <Route path="market-analysis" element={<MarketAnalysis />} />
             <Route path="product-ideas" element={<ProductIdeas />} />
+            <Route path="growth-plan" element={<GrowthPlan />} />
             <Route path="profile" element={<Profile />} />
             <Route path="settings" element={<Settings />} />
           </Route>
