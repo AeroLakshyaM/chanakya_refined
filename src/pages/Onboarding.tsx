@@ -82,9 +82,18 @@ export default function Onboarding() {
       if (active) {
         setUserId(user.id);
         setProfile({
-          ...blankProfile,
-          ...data,
-          full_name: data?.full_name || user.user_metadata?.full_name || "",
+          full_name: data?.full_name ?? user.user_metadata?.full_name ?? "",
+          company_name: data?.company_name ?? "",
+          company_type: data?.company_type ?? "",
+          company_stage: data?.company_stage ?? "",
+          industry: data?.industry ?? "",
+          product_or_service: data?.product_or_service ?? "",
+          target_customer: data?.target_customer ?? "",
+          primary_goal: data?.primary_goal ?? "",
+          biggest_challenge: data?.biggest_challenge ?? "",
+          team_size: data?.team_size ?? "",
+          monthly_revenue_range: data?.monthly_revenue_range ?? "",
+          onboarding_completed_at: data?.onboarding_completed_at ?? null,
         });
         setLoading(false);
       }
@@ -100,15 +109,15 @@ export default function Onboarding() {
     setSaving(true);
     const { error } = await supabase.from("profiles").upsert({
       user_id: userId,
-      full_name: profile.full_name.trim() || null,
-      company_name: profile.company_name.trim() || null,
+      full_name: (profile.full_name ?? "").trim() || null,
+      company_name: (profile.company_name ?? "").trim() || null,
       company_type: profile.company_type || null,
       company_stage: profile.company_stage || null,
-      industry: profile.industry.trim() || null,
-      product_or_service: profile.product_or_service.trim() || null,
-      target_customer: profile.target_customer.trim() || null,
+      industry: (profile.industry ?? "").trim() || null,
+      product_or_service: (profile.product_or_service ?? "").trim() || null,
+      target_customer: (profile.target_customer ?? "").trim() || null,
       primary_goal: profile.primary_goal || null,
-      biggest_challenge: profile.biggest_challenge.trim() || null,
+      biggest_challenge: (profile.biggest_challenge ?? "").trim() || null,
       team_size: profile.team_size || null,
       monthly_revenue_range: profile.monthly_revenue_range || null,
       onboarding_completed_at: complete ? new Date().toISOString() : null,
