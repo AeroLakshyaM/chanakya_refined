@@ -23,11 +23,13 @@ serve(async (req) => {
   }
 
   try {
-    const { message, conversationHistory, selectedBot, conversationId, userId } = await req.json();
+    const { message, conversationHistory, selectedBot, conversationId } = await req.json();
     
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    const GEMINI_MODEL = Deno.env.get("GEMINI_MODEL") || "gemini-3.8-flash";
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
     
     if (!GEMINI_API_KEY) {
       throw new Error("GEMINI_API_KEY is not configured");
@@ -49,7 +51,7 @@ serve(async (req) => {
 
     // Call Gemini API
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: "POST",
         headers: {
@@ -79,8 +81,30 @@ serve(async (req) => {
     const aiMessage = data.candidates[0].content.parts[0].text;
 
     // Save conversation to Supabase if conversationId provided
-    if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY && conversationId && userId) {
+    if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY && SUPABASE_ANON_KEY && conversationId) {
+      const authorization = req.headers.get("Authorization");
+      if (!authorization?.startsWith("Bearer ")) {
+        throw new Error("A valid signed-in session is required to save this conversation.");
+      }
+
+      const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        global: { headers: { Authorization: authorization } },
+      });
+      const { data: { user: authenticatedUser }, error: authError } = await authClient.auth.getUser();
+      if (authError || !authenticatedUser) {
+        throw new Error("Your session could not be verified. Please sign in again.");
+      }
+
       const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      const { data: conversation, error: conversationError } = await supabase
+        .from('chat_conversations')
+        .select('id')
+        .eq('id', conversationId)
+        .eq('user_id', authenticatedUser.id)
+        .maybeSingle();
+
+      if (conversationError) throw conversationError;
+      if (!conversation) throw new Error("Conversation not found for this account.");
       
       // Save user message
       await supabase.from('chat_messages').insert({
@@ -102,7 +126,8 @@ serve(async (req) => {
       await supabase
         .from('chat_conversations')
         .update({ updated_at: new Date().toISOString() })
-        .eq('id', conversationId);
+        .eq('id', conversationId)
+        .eq('user_id', authenticatedUser.id);
     }
 
     console.log(`Response from ${selectedBotName}: ${aiMessage.substring(0, 100)}...`);

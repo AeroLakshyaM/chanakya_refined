@@ -13,6 +13,7 @@ import ProductIdeas from "./pages/dashboard/ProductIdeas";
 import Profile from "./pages/dashboard/Profile";
 import Settings from "./pages/dashboard/Settings";
 import NotFound from "./pages/NotFound";
+import Overview from "./pages/dashboard/Overview";
 
 const queryClient = new QueryClient();
 
@@ -26,7 +27,7 @@ const App = () => (
           <Route path="/" element={<Landing />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/dashboard" element={<DashboardLayout />}>
-            <Route index element={<Navigate to="/dashboard/chatbot" replace />} />
+            <Route index element={<Overview />} />
             <Route path="chatbot" element={<Chatbot />} />
             <Route path="meeting-room" element={<MeetingRoom />} />
             <Route path="market-analysis" element={<MarketAnalysis />} />
