@@ -58,7 +58,7 @@ export default function Auth() {
         toast({ title: "Your workspace is ready", description: "You’re signed in." });
         navigate("/dashboard", { replace: true });
       } else {
-        toast({ title: "Check your inbox", description: "We sent a confirmation link. Open it to verify your email and finish signing in." });
+        toast({ title: "Sign-up did not start a session", description: "Check that Confirm email is turned off in your Supabase Email provider settings.", variant: "destructive" });
       }
     } catch (error: unknown) {
       toast({ title: "Could not create your account", description: messageFor(error), variant: "destructive" });
