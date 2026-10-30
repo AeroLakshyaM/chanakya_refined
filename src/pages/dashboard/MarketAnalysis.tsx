@@ -1,131 +1,50 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp, TrendingDown, DollarSign, Users, Target, Zap } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { useState } from "react";
+import { ArrowRight, BarChart3, Compass, Loader2, Sparkles } from "lucide-react";
+import PageHeader from "@/components/dashboard/PageHeader";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 export default function MarketAnalysis() {
-  const metrics = [
-    { label: "Market Growth", value: "+23.5%", trend: "up", icon: TrendingUp, color: "text-green-500" },
-    { label: "Competition Level", value: "Medium", trend: "stable", icon: Target, color: "text-yellow-500" },
-    { label: "Opportunity Score", value: "8.7/10", trend: "up", icon: Zap, color: "text-primary" },
-    { label: "Target Audience", value: "2.4M", trend: "up", icon: Users, color: "text-blue-500" },
-  ];
+  const [company, setCompany] = useState("");
+  const [market, setMarket] = useState("");
+  const [context, setContext] = useState("");
+  const [analysis, setAnalysis] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
 
-  const insights = [
-    {
-      title: "Growing Demand in AI Tools",
-      description: "Market analysis shows 45% YoY growth in AI-powered business tools sector",
-      severity: "high",
-      advisor: "Information Advisor",
-    },
-    {
-      title: "Competitive Pricing Strategy",
-      description: "Competitors are pricing 20% lower in key demographics",
-      severity: "medium",
-      advisor: "Finance Advisor",
-    },
-    {
-      title: "Feature Gap Identified",
-      description: "83% of users request better mobile experience",
-      severity: "high",
-      advisor: "Technical Advisor",
-    },
-  ];
+  const runAnalysis = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setLoading(true);
+    setAnalysis("");
+    try {
+      const prompt = `Create an initial market strategy brief using only the information supplied below. Do not invent market sizes, growth rates, competitor facts, or citations. Mark unknowns as assumptions and end with the most useful validation steps.\n\nCompany or product: ${company}\nMarket: ${market}\nContext: ${context || "No additional context supplied."}\n\nUse these headings: Market framing; Likely customer segments; Competitors to investigate; Key assumptions; Three practical validation steps; Questions for the team.`;
+      const { data, error } = await supabase.functions.invoke("ai-advisors", { body: { message: prompt, conversationHistory: [], selectedBot: "Business Strategist" } });
+      if (error) throw error;
+      if (!data?.message) throw new Error("The advisor returned an empty response. Please try again.");
+      setAnalysis(data.message);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "The market brief could not be generated.";
+      toast({ title: "Could not build the market brief", description: message, variant: "destructive" });
+    } finally { setLoading(false); }
+  };
 
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-4xl font-bold mb-2">Market Analysis</h1>
-        <p className="text-muted-foreground">AI-powered insights into your market position and opportunities</p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {metrics.map((metric) => (
-          <Card key={metric.label} className="hover-lift">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-2">
-                <metric.icon className={`h-5 w-5 ${metric.color}`} />
-                {metric.trend === "up" && <TrendingUp className="h-4 w-4 text-green-500" />}
-                {metric.trend === "down" && <TrendingDown className="h-4 w-4 text-red-500" />}
-              </div>
-              <p className="text-2xl font-bold mb-1">{metric.value}</p>
-              <p className="text-sm text-muted-foreground">{metric.label}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-2xl">Market Insights</CardTitle>
-          <CardDescription>Analyzed by our 5 AI advisors</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {insights.map((insight, index) => (
-            <div key={index} className="p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors">
-              <div className="flex items-start justify-between mb-2">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h3 className="font-semibold text-lg">{insight.title}</h3>
-                    <Badge variant={insight.severity === "high" ? "destructive" : "secondary"}>
-                      {insight.severity}
-                    </Badge>
-                  </div>
-                  <p className="text-muted-foreground">{insight.description}</p>
-                </div>
-              </div>
-              <div className="mt-3">
-                <Badge variant="outline" className="text-xs">
-                  📊 {insight.advisor}
-                </Badge>
-              </div>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-
-      <div className="grid md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Competitor Analysis</CardTitle>
-            <CardDescription>Key players in your market</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {["Competitor A", "Competitor B", "Competitor C"].map((comp, i) => (
-                <div key={i} className="flex items-center justify-between p-3 border border-border rounded-lg">
-                  <span className="font-medium">{comp}</span>
-                  <Badge variant="outline">{["Strong", "Medium", "Weak"][i]}</Badge>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Market Trends</CardTitle>
-            <CardDescription>Emerging patterns and opportunities</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="p-3 border border-border rounded-lg">
-                <div className="flex items-center gap-2 mb-1">
-                  <TrendingUp className="h-4 w-4 text-green-500" />
-                  <span className="font-medium">AI Integration</span>
-                </div>
-                <p className="text-sm text-muted-foreground">Growing at 45% annually</p>
-              </div>
-              <div className="p-3 border border-border rounded-lg">
-                <div className="flex items-center gap-2 mb-1">
-                  <TrendingUp className="h-4 w-4 text-green-500" />
-                  <span className="font-medium">Mobile-First</span>
-                </div>
-                <p className="text-sm text-muted-foreground">67% of users prefer mobile</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+  return <div>
+    <PageHeader eyebrow="Explore opportunity" title="Market analysis" description="Build a first-pass market brief from your company context. The advisor will separate assumptions from what your team still needs to validate." />
+    <div className="grid gap-6 xl:grid-cols-12">
+      <form onSubmit={runAnalysis} className="space-y-6 border border-border bg-card p-5 sm:p-7 xl:col-span-5">
+        <div className="flex items-start gap-3 border-b border-border pb-5"><span className="grid h-9 w-9 shrink-0 place-items-center bg-secondary"><Compass size={17} /></span><div><h2 className="text-base font-medium">Set the context</h2><p className="mt-1 text-xs leading-relaxed text-muted-foreground">A sharper brief starts with a specific market and customer.</p></div></div>
+        <div className="space-y-2"><Label htmlFor="market-company">Company or product</Label><Input id="market-company" value={company} onChange={(e) => setCompany(e.target.value)} placeholder="What are you building?" required /></div>
+        <div className="space-y-2"><Label htmlFor="target-market">Market to explore</Label><Input id="target-market" value={market} onChange={(e) => setMarket(e.target.value)} placeholder="Industry, region, or category" required /></div>
+        <div className="space-y-2"><Label htmlFor="market-context">What do you already know?</Label><Textarea id="market-context" value={context} onChange={(e) => setContext(e.target.value)} placeholder="Target customer, current alternatives, pricing, traction, or open questions…" className="min-h-32 resize-y" /></div>
+        <Button type="submit" disabled={loading} className="h-11 w-full rounded-none bg-foreground text-background hover:bg-foreground/85">{loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Building your brief…</> : <>Build market brief <ArrowRight className="ml-2 h-4 w-4" /></>}</Button>
+      </form>
+      <section className="min-h-[420px] border border-border bg-background xl:col-span-7" aria-live="polite">
+        {analysis ? <div className="p-5 sm:p-8"><div className="flex items-center gap-3 border-b border-border pb-5"><span className="grid h-9 w-9 place-items-center bg-foreground text-background"><BarChart3 size={17} /></span><div><p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">Working brief</p><h2 className="mt-1 text-lg font-medium">{company} <span className="font-normal text-muted-foreground">· {market}</span></h2></div></div><div className="whitespace-pre-wrap py-6 text-sm leading-7 text-foreground">{analysis}</div><p className="border-t border-border pt-4 text-xs leading-relaxed text-muted-foreground">This is a strategic starting point based on your description, not live market research. Validate claims with current, reliable sources before making decisions.</p></div> : <div className="flex min-h-[420px] flex-col items-center justify-center px-8 text-center"><span className="grid h-12 w-12 place-items-center border border-border text-primary"><Sparkles size={20} /></span><h2 className="mt-5 text-xl font-medium tracking-tight">Your market brief will appear here</h2><p className="mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">Add a product and market, then generate a structured first pass with assumptions and validation steps clearly called out.</p></div>}
+      </section>
     </div>
-  );
+  </div>;
 }

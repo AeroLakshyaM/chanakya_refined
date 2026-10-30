@@ -1,99 +1,21 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Users, Calendar, Clock, Video } from "lucide-react";
+import { Link } from "react-router-dom";
+import { ArrowRight, AudioLines, Bot, CalendarDays, CircleDot, FileText, Users } from "lucide-react";
+import PageHeader from "@/components/dashboard/PageHeader";
+
+const agenda = [
+  { icon: CircleDot, title: "Frame the decision", copy: "Name the outcome you need and the constraints that matter." },
+  { icon: Users, title: "Hear a focused perspective", copy: "Choose an advisor persona that fits the question." },
+  { icon: FileText, title: "Capture the next move", copy: "Turn the conversation into one clear action to validate." },
+];
 
 export default function MeetingRoom() {
-  const upcomingMeetings = [
-    {
-      id: 1,
-      title: "Product Strategy Discussion",
-      advisors: ["Business Advisor", "Finance Advisor"],
-      date: "2025-10-05",
-      time: "2:00 PM",
-      duration: "60 min",
-    },
-    {
-      id: 2,
-      title: "Technical Architecture Review",
-      advisors: ["Technical Advisor", "Operations Advisor"],
-      date: "2025-10-06",
-      time: "10:00 AM",
-      duration: "45 min",
-    },
-  ];
-
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-4xl font-bold mb-2">Meeting Room</h1>
-        <p className="text-muted-foreground">Schedule and manage meetings with your AI advisors</p>
-      </div>
-
-      <Card className="border-primary/20 shadow-lg">
-        <CardHeader className="bg-gradient-blue text-primary-foreground">
-          <CardTitle className="flex items-center gap-2">
-            <Video className="h-6 w-6" />
-            AI Advisor Conference Room
-          </CardTitle>
-          <CardDescription className="text-primary-foreground/80">
-            Host virtual meetings with all 5 AI advisors simultaneously
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="pt-6">
-          <Button className="w-full gradient-blue" size="lg">
-            <Video className="mr-2 h-5 w-5" />
-            Start New Meeting
-          </Button>
-        </CardContent>
-      </Card>
-
-      <div>
-        <h2 className="text-2xl font-bold mb-4">Upcoming Meetings</h2>
-        <div className="grid gap-4">
-          {upcomingMeetings.map((meeting) => (
-            <Card key={meeting.id} className="hover-lift">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-3 flex-1">
-                    <h3 className="text-xl font-semibold">{meeting.title}</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {meeting.advisors.map((advisor) => (
-                        <Badge key={advisor} variant="secondary">
-                          <Users className="h-3 w-3 mr-1" />
-                          {advisor}
-                        </Badge>
-                      ))}
-                    </div>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-4 w-4" />
-                        {meeting.date}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-4 w-4" />
-                        {meeting.time}
-                      </span>
-                      <Badge variant="outline">{meeting.duration}</Badge>
-                    </div>
-                  </div>
-                  <Button variant="outline">Join</Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Meeting History</CardTitle>
-          <CardDescription>View recordings and transcripts of past meetings</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">No past meetings yet. Start your first meeting to see history here.</p>
-        </CardContent>
-      </Card>
-    </div>
-  );
+  return <div>
+    <PageHeader eyebrow="Structured thinking" title="Advisor sessions" description="Give an important decision the time and structure it deserves. Start with a focused question, then work toward an actionable next step." />
+    <section className="grid gap-0 border border-border lg:grid-cols-12">
+      <div className="bg-foreground p-6 text-background sm:p-9 lg:col-span-7"><p className="text-xs font-medium uppercase tracking-[0.15em] text-background/55">A useful session starts here</p><h2 className="mt-4 max-w-xl text-4xl font-medium leading-[0.98] tracking-[-0.05em] sm:text-5xl">Bring one decision. Leave with a direction.</h2><p className="mt-5 max-w-lg text-sm leading-relaxed text-background/65">Chanakya’s current session experience is a guided conversation with one AI advisor at a time. Scheduling, video calls, and multi-advisor transcripts are not available yet.</p><Link to="/dashboard/chatbot" className="mt-8 inline-flex h-11 items-center gap-3 bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90">Open advisor chat <ArrowRight size={16} /></Link></div>
+      <div className="flex flex-col justify-center divide-y divide-border bg-card px-6 sm:px-8 lg:col-span-5">{agenda.map(({ icon: Icon, title, copy }, index) => <div key={title} className="flex gap-4 py-5"><span className="pt-0.5 text-xs tabular-nums text-muted-foreground">0{index + 1}</span><div><div className="flex items-center gap-2"><Icon size={16} className="text-primary" /><h3 className="text-sm font-medium">{title}</h3></div><p className="mt-1 text-xs leading-relaxed text-muted-foreground">{copy}</p></div></div>)}</div>
+    </section>
+    <section className="mt-8 grid gap-4 sm:grid-cols-2"><div className="border border-border p-5"><AudioLines size={17} className="text-muted-foreground" /><h3 className="mt-4 text-base font-medium">A clear session brief</h3><p className="mt-1 text-sm leading-relaxed text-muted-foreground">Start by sharing the context, who is affected, and what a good outcome would look like.</p></div><div className="border border-border p-5"><Bot size={17} className="text-muted-foreground" /><h3 className="mt-4 text-base font-medium">One specialist at a time</h3><p className="mt-1 text-sm leading-relaxed text-muted-foreground">Choose from strategy, finance, operations, technology, marketing, people, legal, or product guidance.</p></div></section>
+    <div className="mt-8 flex items-center gap-3 border-t border-border pt-5 text-sm text-muted-foreground"><CalendarDays size={16} /><span>Session scheduling will be added when calendar and meeting storage are connected.</span></div>
+  </div>;
 }

@@ -1,3 +1,5 @@
+/// <reference path="../types.d.ts" />
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
@@ -17,7 +19,7 @@ const botPersonas = {
   "Product Manager": "You are a Product Manager with 20 years of experience in product development, user experience, and product strategy. You guide product roadmaps, prioritize features, and ensure product-market fit. Be user-focused and strategic."
 };
 
-serve(async (req) => {
+serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }

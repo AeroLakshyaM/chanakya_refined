@@ -19,14 +19,14 @@ type Message = {
 };
 
 const botPersonas = [
-  { name: "Business Strategist", color: "bg-blue-500", icon: "💼", description: "Strategic planning & growth" },
-  { name: "Financial Expert", color: "bg-green-500", icon: "💰", description: "Finance & investment advice" },
-  { name: "Operations Specialist", color: "bg-purple-500", icon: "⚙️", description: "Process optimization" },
-  { name: "Technology Consultant", color: "bg-orange-500", icon: "💻", description: "Tech solutions & innovation" },
-  { name: "Marketing Guru", color: "bg-pink-500", icon: "📊", description: "Marketing & brand strategy" },
-  { name: "HR Professional", color: "bg-indigo-500", icon: "👥", description: "People & culture" },
-  { name: "Legal Advisor", color: "bg-red-500", icon: "⚖️", description: "Legal & compliance" },
-  { name: "Product Manager", color: "bg-teal-500", icon: "🎯", description: "Product development" },
+  { name: "Business Strategist", color: "", icon: "BS", description: "Strategic planning & growth" },
+  { name: "Financial Expert", color: "", icon: "FE", description: "Finance & investment advice" },
+  { name: "Operations Specialist", color: "", icon: "OS", description: "Process optimization" },
+  { name: "Technology Consultant", color: "", icon: "TC", description: "Tech solutions & innovation" },
+  { name: "Marketing Guru", color: "", icon: "MG", description: "Marketing & brand strategy" },
+  { name: "HR Professional", color: "", icon: "HR", description: "People & culture" },
+  { name: "Legal Advisor", color: "", icon: "LA", description: "Legal & compliance" },
+  { name: "Product Manager", color: "", icon: "PM", description: "Product development" },
 ];
 
 export default function Chatbot() {
@@ -73,7 +73,7 @@ export default function Chatbot() {
       setMessages([{
         id: "1",
         role: "assistant",
-        content: `Hello! I'm your AI assistant. Select a specialized bot from the dropdown above, and I'll help you with expert guidance in that field. Each bot has 20 years of experience in their domain!`,
+        content: "Welcome. Choose a specialist, share the context behind your decision, and I’ll help you work through the options and next steps.",
         timestamp: new Date(),
       }]);
     };
@@ -164,23 +164,23 @@ export default function Chatbot() {
   };
 
   return (
-    <div className="h-[calc(100vh-8rem)] px-4">
-      <Card className="h-full flex flex-col shadow-2xl border-primary/20 bg-gradient-to-br from-card via-card to-primary/5">
-        <CardHeader className="border-b border-border/50 bg-gradient-to-r from-primary/10 to-transparent backdrop-blur-sm">
+    <div className="h-[calc(100vh-11rem)] min-h-[480px]">
+      <Card className="flex h-full flex-col rounded-none border-border bg-card shadow-none">
+        <CardHeader className="border-b border-border bg-background px-5 py-5 sm:px-6">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-2xl font-bold flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/20">
-                <Sparkles className="h-6 w-6 text-primary" />
+            <CardTitle className="flex items-center gap-3 text-xl font-medium tracking-tight">
+              <div className="grid h-9 w-9 place-items-center bg-foreground text-background">
+                <Sparkles className="h-4 w-4 text-primary" />
               </div>
               AI Expert Advisors
             </CardTitle>
           </div>
           <div className="mt-4">
             <Select value={selectedBot} onValueChange={setSelectedBot}>
-              <SelectTrigger className="w-full md:w-80 bg-background/50 backdrop-blur-sm border-primary/20 hover:border-primary/40 transition-all">
+              <SelectTrigger className="w-full rounded-none border-border bg-background md:w-80">
                 <SelectValue placeholder="Select your AI expert..." />
               </SelectTrigger>
-              <SelectContent className="bg-background/95 backdrop-blur-lg border-primary/20">
+              <SelectContent className="rounded-none border-border bg-background">
                 {botPersonas.map((bot) => (
                   <SelectItem 
                     key={bot.name} 
@@ -188,7 +188,7 @@ export default function Chatbot() {
                     className="hover:bg-primary/10 cursor-pointer"
                   >
                     <div className="flex items-center gap-3 py-1">
-                      <span className="text-xl">{bot.icon}</span>
+                      <span className="grid h-8 w-8 place-items-center bg-secondary text-[10px] font-medium tracking-wide">{bot.icon}</span>
                       <div>
                         <div className="font-medium">{bot.name}</div>
                         <div className="text-xs text-muted-foreground">{bot.description}</div>
@@ -218,7 +218,7 @@ export default function Chatbot() {
                       <motion.div 
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
-                        className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center flex-shrink-0 shadow-lg"
+                        className="flex h-9 w-9 flex-shrink-0 items-center justify-center bg-foreground text-background"
                       >
                         <Bot className="h-5 w-5 text-primary-foreground" />
                       </motion.div>
@@ -229,13 +229,13 @@ export default function Chatbot() {
                         whileHover={{ scale: 1.02 }}
                         className={`p-4 rounded-2xl backdrop-blur-sm shadow-lg ${
                           message.role === "user"
-                            ? "bg-gradient-to-br from-primary to-primary/80 text-primary-foreground"
-                            : "bg-gradient-to-br from-card to-muted/50 text-foreground border border-border/50"
+                            ? "bg-foreground text-background"
+                            : "border border-border bg-background text-foreground"
                         }`}
                       >
                         {message.advisor && (
                           <Badge variant="secondary" className="mb-2 bg-background/50">
-                            {botPersonas.find((b) => b.name === message.advisor)?.icon} {message.advisor}
+                            <span className="mr-1 text-[10px] font-semibold tracking-wide text-primary">{botPersonas.find((b) => b.name === message.advisor)?.icon}</span> {message.advisor}
                           </Badge>
                         )}
                         <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
@@ -249,7 +249,7 @@ export default function Chatbot() {
                       <motion.div 
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
-                        className="w-10 h-10 rounded-full bg-gradient-to-br from-muted to-muted/60 flex items-center justify-center flex-shrink-0 shadow-lg"
+                        className="flex h-9 w-9 flex-shrink-0 items-center justify-center border border-border bg-background"
                       >
                         <User className="h-5 w-5 text-foreground" />
                       </motion.div>
@@ -263,10 +263,10 @@ export default function Chatbot() {
                     animate={{ opacity: 1, y: 0 }}
                     className="flex gap-3"
                   >
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center flex-shrink-0 shadow-lg">
+                    <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center bg-foreground text-background">
                       <Bot className="h-5 w-5 text-primary-foreground animate-pulse" />
                     </div>
-                    <div className="bg-gradient-to-br from-card to-muted/50 p-4 rounded-2xl border border-border/50 backdrop-blur-sm">
+                    <div className="border border-border bg-background p-4">
                       <div className="flex gap-2">
                         <motion.div 
                           className="w-2 h-2 bg-primary rounded-full" 
@@ -291,7 +291,7 @@ export default function Chatbot() {
             </AnimatePresence>
           </ScrollArea>
           
-          <div className="p-6 border-t border-border/50 bg-gradient-to-r from-background/50 to-muted/20 backdrop-blur-sm">
+          <div className="border-t border-border bg-background p-4 sm:p-5">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -304,12 +304,13 @@ export default function Chatbot() {
                 onChange={(e) => setInput(e.target.value)}
                 placeholder={selectedBot ? `Ask ${selectedBot} anything...` : "Select a bot to start chatting..."}
                 disabled={loading || !selectedBot}
-                className="flex-1 bg-background/50 backdrop-blur-sm border-primary/20 focus:border-primary/40 transition-all"
+                className="flex-1 rounded-none border-border bg-background"
               />
               <Button 
                 type="submit" 
                 disabled={loading || !selectedBot} 
-                className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg transition-all hover:shadow-xl"
+                aria-label="Send message"
+                className="rounded-none bg-foreground text-background hover:bg-primary"
               >
                 <Send className="h-5 w-5" />
               </Button>

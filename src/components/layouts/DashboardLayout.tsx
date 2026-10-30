@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Activity, BarChart3, Bot, ChevronLeft, ChevronRight, Lightbulb, LogOut, Menu, Settings, Users, UserRound, X } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
 const navItems = [
   { path: "/dashboard", label: "Overview", icon: BarChart3, end: true },
@@ -13,12 +14,19 @@ const navItems = [
   { path: "/dashboard/product-ideas", label: "Product Ideas", icon: Lightbulb },
   { path: "/dashboard/meeting-room", label: "Advisor Sessions", icon: Users },
 ];
+const utilityItems = [
+  { path: "/dashboard/profile", label: "Profile", icon: UserRound },
+  { path: "/dashboard/settings", label: "Settings", icon: Settings },
+];
 
 export default function DashboardLayout() {
   const [user, setUser] = useState<User | null>(null);
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const reduceMotion = useReducedMotion();
+  const currentPage = [...navItems, ...utilityItems].find((item) => item.path === location.pathname)?.label ?? "Workspace";
   const { toast } = useToast();
 
   useEffect(() => {
@@ -69,10 +77,12 @@ export default function DashboardLayout() {
       </aside>
       <section className="min-w-0 flex-1">
         <header className="sticky top-0 z-30 flex h-[76px] items-center justify-between border-b border-border bg-background/95 px-5 backdrop-blur md:px-8">
-          <div className="flex items-center gap-3"><button className="rounded-md p-2 md:hidden" aria-label="Open navigation" onClick={() => setMobileOpen(true)}><Menu size={20} /></button><span className="text-sm text-muted-foreground">Workspace <span className="px-1.5">/</span><span className="text-foreground">Growth desk</span></span></div>
+          <div className="flex items-center gap-3"><button className="rounded-md p-2 md:hidden" aria-label="Open navigation" onClick={() => setMobileOpen(true)}><Menu size={20} /></button><span className="text-sm text-muted-foreground">Workspace <span className="px-1.5">/</span><span className="text-foreground">{currentPage}</span></span></div>
           <span className="hidden text-xs text-muted-foreground sm:block">A clearer view of what to do next<span className="text-primary">.</span></span>
         </header>
-        <main className="mx-auto w-full max-w-[1500px] p-5 md:p-8 lg:p-10"><Outlet /></main>
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.main key={location.pathname} initial={{ opacity: 0, y: reduceMotion ? 0 : 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 0 }} transition={{ duration: reduceMotion ? 0 : 0.18, ease: "easeOut" }} className="mx-auto w-full max-w-[1500px] p-5 md:p-8 lg:p-10"><Outlet /></motion.main>
+        </AnimatePresence>
       </section>
     </div>
   );

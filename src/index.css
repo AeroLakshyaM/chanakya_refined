@@ -33,9 +33,29 @@
     --sidebar-border: 30 5% 80%;
     --sidebar-ring: 18 100% 50%;
   }
+  .dark {
+    --background: 60 2% 7%;
+    --foreground: 40 17% 94%;
+    --card: 60 2% 10%;
+    --card-foreground: 40 17% 94%;
+    --popover: 60 2% 10%;
+    --popover-foreground: 40 17% 94%;
+    --secondary: 30 3% 17%;
+    --secondary-foreground: 40 17% 94%;
+    --muted: 30 3% 17%;
+    --muted-foreground: 35 5% 66%;
+    --border: 30 3% 24%;
+    --input: 30 3% 24%;
+    --sidebar-background: 60 2% 7%;
+    --sidebar-foreground: 40 17% 94%;
+    --sidebar-accent: 30 3% 17%;
+    --sidebar-accent-foreground: 40 17% 94%;
+    --sidebar-border: 30 3% 24%;
+  }
   * { @apply border-border; }
   html { scroll-behavior: smooth; }
-  body { @apply bg-background text-foreground; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-weight: 400; }
+  body { @apply bg-background text-foreground; font-family: Inter, "Segoe UI Variable", "Segoe UI", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif; font-weight: 400; font-feature-settings: "ss01" on, "cv11" on; }
+  h1, h2, h3, h4 { text-wrap: pretty; }
   button, a { -webkit-tap-highlight-color: transparent; }
   :focus-visible { outline: 2px solid #ff4f00; outline-offset: 4px; }
 }
@@ -44,6 +64,13 @@
   .gradient-blue, .gradient-primary { background: hsl(var(--foreground)); }
   .hover-lift { @apply transition-transform duration-200 hover:-translate-y-0.5; }
   .glassmorphic { @apply border border-border bg-card; }
+  .page-enter { animation: page-enter 420ms cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+  @keyframes page-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
   .editorial-link { background-image: linear-gradient(#ff4f00, #ff4f00); background-position: left bottom; background-repeat: no-repeat; background-size: 0 1px; transition: background-size 300ms ease; }
   .editorial-link:hover { background-size: 100% 1px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
 }

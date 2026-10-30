@@ -17,7 +17,8 @@ The Supabase client reads `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY
 2. Apply the SQL migration in `supabase/migrations` once to create the profile and chat tables, triggers, and row-level security policies.
 3. Configure Auth redirect URLs for local development and the deployed app. Enable email confirmation if that matches your signup flow.
 4. Deploy `supabase/functions/ai-advisors`.
-5. Set the function secrets `GEMINI_API_KEY` and, if needed, `GEMINI_MODEL` (defaults to `gemini-3.8-flash`). Supabase supplies the project URL and keys to deployed functions.
+5. For local Edge Function runs, copy `supabase/functions/.env.example` to `supabase/functions/.env` and set `GEMINI_API_KEY`. This file is ignored and must never be committed.
+6. For deployed functions, set the secret with `supabase secrets set GEMINI_API_KEY=your-gemini-api-key`. Supabase supplies the project URL and keys to deployed functions.
 
 The Edge Function checks the signed-in user before writing conversation history and verifies that the conversation belongs to that user. It also calls Gemini from the server, so the Gemini key stays private.
 
