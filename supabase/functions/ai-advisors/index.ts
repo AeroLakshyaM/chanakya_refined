@@ -28,8 +28,11 @@ serve(async (req: Request) => {
   try {
     const { message, conversationHistory, selectedBot, conversationId } = await req.json();
     
+    const NVIDIA_API_KEY = Deno.env.get("NVIDIA_API_KEY");
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    const AI_PROVIDER = (Deno.env.get("AI_PROVIDER") || (NVIDIA_API_KEY ? "nvidia" : "gemini")).toLowerCase();
     const GEMINI_MODEL = Deno.env.get("GEMINI_MODEL") || "gemini-3.8-flash";
+    const NVIDIA_MODEL = Deno.env.get("NVIDIA_MODEL") || "nvidia/nemotron-3-ultra-550b-a55b";
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
@@ -94,14 +97,11 @@ serve(async (req: Request) => {
       }
     }
     
-    if (!GEMINI_API_KEY) {
-      throw new Error("GEMINI_API_KEY is not configured");
-    }
-
     // Use selected bot or random selection
     const botNames = Object.keys(botPersonas);
     const selectedBotName = selectedBot || botNames[Math.floor(Math.random() * botNames.length)];
-    const systemPrompt = botPersonas[selectedBotName as keyof typeof botPersonas];
+    const systemPrompt = botPersonas[selectedBotName as keyof typeof botPersonas] || botPersonas["Business Strategist"];
+    const conversationalSystemPrompt = `${systemPrompt}\n\nRespond like a thoughtful, approachable colleague: acknowledge their situation naturally, use plain language, and give a clear recommendation with a few concrete next steps. Keep most answers under 200 words unless they ask for detail. Be honest about uncertainty.`;
 
     // Prepare messages for Gemini API
     const history = (Array.isArray(conversationHistory) ? conversationHistory : [])
@@ -110,29 +110,56 @@ serve(async (req: Request) => {
       .map((msg: any) => ({ role: msg.role === 'assistant' ? 'model' : 'user', parts: [{ text: msg.content.slice(0, 4000) }] }));
     while (history[0]?.role === 'model') history.shift();
 
-    console.log("Calling Gemini with bot:", selectedBotName);
+    console.log(`Calling ${AI_PROVIDER} with bot:`, selectedBotName);
 
-    // Call Gemini API
+    // Provider keys stay on the server; they are never exposed to the browser.
     let response: Response;
     try {
-      response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
-        {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        signal: AbortSignal.timeout(20_000),
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: `${systemPrompt}\n\nRespond like a thoughtful, approachable colleague: acknowledge their situation naturally, use plain language, and give a clear recommendation with a few concrete next steps. Keep most answers under 200 words unless they ask for detail. Be honest about uncertainty.` }] },
-          contents: [...history, { role: 'user', parts: [{ text: message.trim() }] }],
-          generationConfig: {
-            maxOutputTokens: 1024,
-            thinkingConfig: { thinkingLevel: "low" },
-          }
-        }),
-        }
-      );
+      if (AI_PROVIDER === "nvidia") {
+        if (!NVIDIA_API_KEY) throw new Error("NVIDIA_API_KEY is not configured in Supabase function secrets.");
+        const nvidiaMessages = [
+          { role: "system", content: conversationalSystemPrompt },
+          ...history.map((entry) => ({ role: entry.role === "model" ? "assistant" : "user", content: entry.parts[0].text })),
+          { role: "user", content: message.trim() },
+        ];
+        response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${NVIDIA_API_KEY}`,
+          },
+          signal: AbortSignal.timeout(20_000),
+          body: JSON.stringify({
+            model: NVIDIA_MODEL,
+            messages: nvidiaMessages,
+            temperature: 0.6,
+            top_p: 0.95,
+            max_tokens: 1024,
+            stream: false,
+            chat_template_kwargs: { enable_thinking: false },
+          }),
+        });
+      } else if (AI_PROVIDER === "gemini") {
+        if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured in Supabase function secrets.");
+        response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            signal: AbortSignal.timeout(20_000),
+            body: JSON.stringify({
+              systemInstruction: { parts: [{ text: conversationalSystemPrompt }] },
+              contents: [...history, { role: 'user', parts: [{ text: message.trim() }] }],
+              generationConfig: {
+                maxOutputTokens: 1024,
+                thinkingConfig: { thinkingLevel: "low" },
+              },
+            }),
+          },
+        );
+      } else {
+        throw new Error(`Unsupported AI_PROVIDER: ${AI_PROVIDER}. Use "nvidia" or "gemini".`);
+      }
     } catch (error) {
       if (error instanceof DOMException && error.name === "TimeoutError") {
         throw new Error("The advisor took longer than 20 seconds. Your message is saved; please try again.");
@@ -142,15 +169,14 @@ serve(async (req: Request) => {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("Gemini API error:", response.status, errorText);
-      throw new Error(`Gemini API error: ${response.status}`);
+      console.error(`${AI_PROVIDER} API error:`, response.status, errorText);
+      throw new Error(`${AI_PROVIDER} API error (${response.status}). Check the provider key, model name, and API quota.`);
     }
 
     const data = await response.json();
-    const aiMessage = data.candidates?.[0]?.content?.parts
-      ?.map((part: { text?: string }) => part.text || "")
-      .join("")
-      .trim();
+    const aiMessage = (AI_PROVIDER === "nvidia"
+      ? data.choices?.[0]?.message?.content
+      : data.candidates?.[0]?.content?.parts?.map((part: { text?: string }) => part.text || "").join(""))?.trim();
     if (!aiMessage) throw new Error("The advisor returned an empty response. Please try again.");
 
     // Save conversation to Supabase if conversationId provided
