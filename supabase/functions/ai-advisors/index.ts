@@ -26,7 +26,7 @@ serve(async (req: Request) => {
 
   let failureStatus = 500;
   try {
-    const { message, conversationHistory, selectedBot, conversationId, businessContext, provider } = await req.json();
+    const { message, conversationHistory, selectedBot, conversationId, businessContext, provider, timeoutMs } = await req.json();
     
     const NVIDIA_API_KEY = Deno.env.get("NVIDIA_API_KEY");
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
@@ -34,6 +34,9 @@ serve(async (req: Request) => {
     const AI_PROVIDER = provider === "nvidia" || provider === "gemini" ? provider : configuredProvider;
     const GEMINI_MODEL = Deno.env.get("GEMINI_MODEL") || "gemini-3.8-flash";
     const NVIDIA_MODEL = Deno.env.get("NVIDIA_MODEL") || "nvidia/nemotron-3-ultra-550b-a55b";
+    const requestTimeoutMs = Number.isFinite(timeoutMs)
+      ? Math.min(Math.max(Number(timeoutMs), 10_000), 70_000)
+      : 20_000;
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
@@ -132,7 +135,7 @@ serve(async (req: Request) => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${NVIDIA_API_KEY}`,
           },
-          signal: AbortSignal.timeout(20_000),
+          signal: AbortSignal.timeout(requestTimeoutMs),
           body: JSON.stringify({
             model: NVIDIA_MODEL,
             messages: nvidiaMessages,
@@ -150,7 +153,7 @@ serve(async (req: Request) => {
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            signal: AbortSignal.timeout(20_000),
+            signal: AbortSignal.timeout(requestTimeoutMs),
             body: JSON.stringify({
               systemInstruction: { parts: [{ text: conversationalSystemPrompt }] },
               contents: [...history, { role: 'user', parts: [{ text: message.trim() }] }],
@@ -166,7 +169,7 @@ serve(async (req: Request) => {
       }
     } catch (error) {
       if (error instanceof DOMException && error.name === "TimeoutError") {
-        throw new Error("The advisor took longer than 20 seconds. Your message is saved; please try again.");
+        throw new Error(`The advisor timed out after ${Math.round(requestTimeoutMs / 1000)} seconds.`);
       }
       throw error;
     }
