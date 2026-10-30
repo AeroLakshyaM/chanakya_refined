@@ -1,14 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Send, Bot, User, Sparkles } from "lucide-react";
+import { Send, Bot, User, Sparkles, ArrowUpRight, Check, LockKeyhole, MessageSquareText } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
+import PageHeader from "@/components/dashboard/PageHeader";
 
 type Message = {
   id: string;
@@ -237,161 +235,76 @@ export default function Chatbot() {
     }
   };
 
-  return (
-    <div className="h-[calc(100vh-11rem)] min-h-[480px] min-w-0">
-      <Card className="flex h-full min-w-0 flex-col overflow-hidden rounded-none border-border bg-card shadow-none">
-        <CardHeader className="border-b border-border bg-background px-5 py-5 sm:px-6">
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-3 text-xl font-medium tracking-tight">
-              <div className="grid h-9 w-9 place-items-center bg-foreground text-background">
-                <Sparkles className="h-4 w-4 text-primary" />
+  const activeBot = botPersonas.find((bot) => bot.name === selectedBot);
+  const userTurns = messages.filter((message) => message.role === "user").length;
+  const suggestions = ["Help me pick one growth priority for this quarter", "What should I validate before I invest more?", "Turn my biggest challenge into a practical plan"];
+
+  return <div className="chat-page min-w-0">
+    <PageHeader eyebrow="Think it through" title="Advisor desk" description="Bring the real question. Choose a perspective, and work toward a clear next move." action={<div className="hidden items-center gap-2 border border-border px-3 py-2 text-xs text-muted-foreground sm:flex"><span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />Private workspace</div>} />
+
+    <div className="grid min-w-0 gap-5 xl:grid-cols-[260px_minmax(0,1fr)]">
+      <aside className="chat-advisors min-w-0 border border-border bg-card p-4 sm:p-5">
+        <div className="mb-4 flex items-end justify-between"><div><p className="text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground">Choose a lens</p><h2 className="mt-1 text-lg font-medium tracking-tight">Your advisors</h2></div><span className="text-[10px] tabular-nums text-muted-foreground">08</span></div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-1">
+          {botPersonas.map((bot) => {
+            const active = selectedBot === bot.name;
+            return <motion.button key={bot.name} type="button" layout onClick={() => setSelectedBot(bot.name)} aria-pressed={active} className={`group relative flex min-w-0 items-center gap-3 border p-2.5 text-left transition-colors duration-200 ${active ? "border-foreground bg-foreground text-background" : "border-border bg-background hover:border-primary/60 hover:bg-primary/[0.035]"}`}>
+              {active && <motion.span layoutId="advisor-active-indicator" className="absolute inset-y-0 left-0 w-0.5 bg-primary" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
+              <span className={`grid h-9 w-9 shrink-0 place-items-center text-[10px] font-semibold tracking-wide ${active ? "bg-background/10 text-primary" : "bg-secondary text-foreground"}`}>{bot.icon}</span>
+              <span className="min-w-0 flex-1"><span className="block truncate text-xs font-medium">{bot.name}</span><span className={`mt-0.5 hidden truncate text-[10px] sm:block xl:block ${active ? "text-background/60" : "text-muted-foreground"}`}>{bot.description}</span></span>
+              {active && <Check size={14} className="shrink-0 text-primary" />}
+            </motion.button>;
+          })}
+        </div>
+
+        <div className="mt-4 border-t border-border pt-4">
+          <div className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.13em] text-muted-foreground"><LockKeyhole size={12} className="text-primary" />Private by default</div>
+          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{businessContext ? "Your company notes are shared with the advisor to make answers more relevant." : "Add company context to your profile for more tailored advice."}</p>
+        </div>
+      </aside>
+
+      <section className="chat-workspace flex h-[min(72vh,780px)] min-h-[560px] min-w-0 flex-col overflow-hidden border border-border bg-background shadow-[0_16px_50px_-40px_rgba(0,0,0,0.32)]">
+        <div className="flex min-h-[76px] items-center justify-between gap-4 border-b border-border px-4 py-3 sm:px-6">
+          <div className="flex min-w-0 items-center gap-3">
+            <motion.div key={activeBot?.name || "none"} initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.2 }} className="grid h-10 w-10 shrink-0 place-items-center bg-foreground text-background"><Sparkles size={17} className="text-primary" /></motion.div>
+            <div className="min-w-0"><AnimatePresence mode="wait" initial={false}><motion.div key={activeBot?.name || "choose"} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.16 }}><h2 className="truncate text-sm font-medium sm:text-base">{activeBot?.name || "Choose your advisor"}</h2><p className="mt-0.5 truncate text-xs text-muted-foreground">{activeBot?.description || "Pick a specialist to begin the conversation"}</p></motion.div></AnimatePresence></div>
+          </div>
+          <div className="flex shrink-0 items-center gap-2 text-[10px] text-muted-foreground sm:text-xs"><span className="grid h-7 w-7 place-items-center border border-border"><MessageSquareText size={13} /></span><span className="hidden sm:inline">Saved automatically</span></div>
+        </div>
+
+        <ScrollArea ref={scrollRef} className="min-h-0 min-w-0 flex-1 px-3 py-5 sm:px-6 sm:py-7">
+          <div className="mx-auto max-w-3xl space-y-5">
+            {messages.map((message, index) => <motion.div key={message.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.24, delay: Math.min(index * 0.025, 0.12), ease: "easeOut" }} className={`flex w-full min-w-0 items-start gap-3 ${message.role === "user" ? "justify-end" : ""}`}>
+              {message.role === "assistant" && <span className="mt-1 grid h-8 w-8 shrink-0 place-items-center border border-border bg-card"><Bot size={16} className="text-primary" /></span>}
+              <div className={`min-w-0 max-w-[calc(100%-2.75rem)] sm:max-w-[82%] ${message.role === "user" ? "order-first" : ""}`}>
+                <div className={`min-w-0 break-words [overflow-wrap:anywhere] px-4 py-3.5 sm:px-5 ${message.role === "user" ? "bg-foreground text-background" : "border border-border bg-card text-foreground"}`}>
+                  {message.advisor && <Badge variant="secondary" className="mb-2 rounded-none bg-secondary text-[10px]">{message.advisor}</Badge>}
+                  <p className="whitespace-pre-wrap break-words text-sm leading-7 [overflow-wrap:anywhere]">{message.content}</p>
+                </div>
+                <p className={`mt-1.5 px-1 text-[10px] text-muted-foreground ${message.role === "user" ? "text-right" : ""}`}>{message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</p>
               </div>
-              AI Expert Advisors
-            </CardTitle>
+              {message.role === "user" && <span className="mt-1 grid h-8 w-8 shrink-0 place-items-center border border-border bg-background"><User size={15} /></span>}
+            </motion.div>)}
+
+            {!loading && userTurns === 0 && selectedBot && <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.1 }} className="ml-11 max-w-2xl pt-2">
+              <p className="mb-3 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">A few ways to open</p>
+              <div className="flex flex-wrap gap-2">{suggestions.map((suggestion) => <button key={suggestion} type="button" onClick={() => setInput(suggestion)} className="group flex items-center gap-2 border border-border bg-card px-3 py-2 text-left text-xs leading-relaxed transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/60 hover:bg-primary/[0.035]">{suggestion}<ArrowUpRight size={12} className="shrink-0 text-muted-foreground transition-colors group-hover:text-primary" /></button>)}</div>
+            </motion.div>}
+
+            {loading && <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex items-start gap-3"><span className="mt-1 grid h-8 w-8 shrink-0 place-items-center border border-border bg-card"><Bot size={16} className="animate-pulse text-primary" /></span><div className="border border-border bg-card px-4 py-3.5"><p className="mb-2 text-[10px] font-medium uppercase tracking-[0.13em] text-muted-foreground">{activeBot?.name || "Your advisor"} is thinking</p><div className="flex gap-1.5">{[0, 1, 2].map((delay) => <motion.span key={delay} className="h-1.5 w-1.5 rounded-full bg-primary" animate={{ y: [0, -5, 0], opacity: [0.45, 1, 0.45] }} transition={{ duration: 0.75, repeat: Infinity, delay: delay * 0.16 }} />)}</div></div></motion.div>}
           </div>
-          <div className="mt-4">
-            <Select value={selectedBot} onValueChange={setSelectedBot}>
-              <SelectTrigger className="w-full rounded-none border-border bg-background md:w-80">
-                <SelectValue placeholder="Select your AI expert..." />
-              </SelectTrigger>
-              <SelectContent className="rounded-none border-border bg-background">
-                {botPersonas.map((bot) => (
-                  <SelectItem 
-                    key={bot.name} 
-                    value={bot.name}
-                    className="hover:bg-primary/10 cursor-pointer"
-                  >
-                    <div className="flex items-center gap-3 py-1">
-                      <span className="grid h-8 w-8 place-items-center bg-secondary text-[10px] font-medium tracking-wide">{bot.icon}</span>
-                      <div>
-                        <div className="font-medium">{bot.name}</div>
-                        <div className="text-xs text-muted-foreground">{bot.description}</div>
-                      </div>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </CardHeader>
-        
-        <CardContent className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden p-0">
-          <ScrollArea ref={scrollRef} className="min-h-0 min-w-0 flex-1 p-4 sm:p-6">
-            <AnimatePresence mode="popLayout">
-              <div className="space-y-6">
-                {messages.map((message) => (
-                  <motion.div
-                    key={message.id}
-                    initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    transition={{ duration: 0.3 }}
-                    className={`flex w-full min-w-0 items-start gap-3 ${message.role === "user" ? "justify-end" : ""}`}
-                  >
-                    {message.role === "assistant" && (
-                      <motion.div 
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        className="flex h-9 w-9 flex-shrink-0 items-center justify-center bg-foreground text-background"
-                      >
-                        <Bot className="h-5 w-5 text-primary-foreground" />
-                      </motion.div>
-                    )}
-                    
-                    <div className={`min-w-0 max-w-[calc(100%-3rem)] sm:max-w-[75%] ${message.role === "user" ? "order-first" : ""}`}>
-                      <motion.div
-                        className={`min-w-0 break-words [overflow-wrap:anywhere] p-4 ${
-                          message.role === "user"
-                            ? "bg-foreground text-background"
-                            : "border border-border bg-background text-foreground"
-                        }`}
-                      >
-                        {message.advisor && (
-                          <Badge variant="secondary" className="mb-2 bg-background/50">
-                            <span className="mr-1 text-[10px] font-semibold tracking-wide text-primary">{botPersonas.find((b) => b.name === message.advisor)?.icon}</span> {message.advisor}
-                          </Badge>
-                        )}
-                        <p className="whitespace-pre-wrap break-words text-sm leading-relaxed [overflow-wrap:anywhere]">{message.content}</p>
-                      </motion.div>
-                      <p className="text-xs text-muted-foreground mt-1 px-2">
-                        {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </p>
-                    </div>
-                    
-                    {message.role === "user" && (
-                      <motion.div 
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        className="flex h-9 w-9 flex-shrink-0 items-center justify-center border border-border bg-background"
-                      >
-                        <User className="h-5 w-5 text-foreground" />
-                      </motion.div>
-                    )}
-                  </motion.div>
-                ))}
-                
-                {loading && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex gap-3"
-                  >
-                    <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center bg-foreground text-background">
-                      <Bot className="h-5 w-5 text-primary-foreground animate-pulse" />
-                    </div>
-                    <div className="border border-border bg-background p-4">
-                      <div className="flex gap-2">
-                        <motion.div 
-                          className="w-2 h-2 bg-primary rounded-full" 
-                          animate={{ y: [0, -8, 0] }}
-                          transition={{ duration: 0.6, repeat: Infinity, delay: 0 }}
-                        />
-                        <motion.div 
-                          className="w-2 h-2 bg-primary rounded-full" 
-                          animate={{ y: [0, -8, 0] }}
-                          transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }}
-                        />
-                        <motion.div 
-                          className="w-2 h-2 bg-primary rounded-full" 
-                          animate={{ y: [0, -8, 0] }}
-                          transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }}
-                        />
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </div>
-            </AnimatePresence>
-          </ScrollArea>
-          
-          <div className="border-t border-border bg-background p-4 sm:p-5">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleSend();
-              }}
-              className="flex gap-3"
-            >
-              <Input
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder={!conversationReady ? "Preparing your saved chat…" : selectedBot ? `Ask ${selectedBot} anything...` : "Select a bot to start chatting..."}
-                disabled={loading || !selectedBot || !conversationReady}
-                aria-label="Message your advisor"
-                className="flex-1 rounded-none border-border bg-background"
-              />
-              <Button 
-                type="submit" 
-                disabled={loading || !selectedBot || !conversationReady}
-                aria-label="Send message"
-                className="rounded-none bg-foreground text-background hover:bg-primary"
-              >
-                <Send className="h-5 w-5" />
-              </Button>
-            </form>
-          </div>
-        </CardContent>
-      </Card>
+        </ScrollArea>
+
+        <div className="border-t border-border bg-card/70 p-3 sm:p-5">
+          <form onSubmit={(event) => { event.preventDefault(); void handleSend(); }} className="mx-auto max-w-3xl">
+            <div className={`flex items-center gap-2 border bg-background p-1.5 pl-3 transition-colors focus-within:border-foreground ${!selectedBot ? "opacity-70" : ""}`}>
+              <Input value={input} onChange={(event) => setInput(event.target.value)} placeholder={!conversationReady ? "Preparing your saved conversation…" : selectedBot ? `Message ${selectedBot}…` : "Choose an advisor to begin"} disabled={loading || !selectedBot || !conversationReady} aria-label="Message your advisor" className="h-11 min-w-0 flex-1 border-0 bg-transparent px-1 shadow-none focus-visible:ring-0" />
+              <button type="submit" disabled={loading || !selectedBot || !conversationReady || !input.trim()} aria-label="Send message" className="grid h-10 w-10 shrink-0 place-items-center bg-foreground text-background transition-all duration-200 hover:bg-primary hover:text-primary-foreground disabled:pointer-events-none disabled:opacity-35"><Send size={16} /></button>
+            </div>
+            <div className="mt-2 flex items-center justify-between gap-3 px-1"><p className="text-[10px] text-muted-foreground">AI can miss details. Check important decisions.</p><p className="flex shrink-0 items-center gap-1 text-[10px] text-muted-foreground"><LockKeyhole size={10} /> Your workspace</p></div>
+          </form>
+        </div>
+      </section>
     </div>
-  );
+  </div>;
 }

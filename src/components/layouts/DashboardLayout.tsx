@@ -101,7 +101,7 @@ export default function DashboardLayout() {
           <span className="hidden text-xs text-muted-foreground sm:block">A clearer view of what to do next<span className="text-primary">.</span></span>
         </header>
         <AnimatePresence mode="wait" initial={false}>
-          <motion.main key={location.pathname} initial={{ opacity: 0, y: reduceMotion ? 0 : 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 0 }} transition={{ duration: reduceMotion ? 0 : 0.18, ease: "easeOut" }} className="mx-auto w-full max-w-[1500px] p-5 md:p-8 lg:p-10"><Outlet /></motion.main>
+          <motion.main key={location.pathname} initial={{ opacity: 0, y: reduceMotion ? 0 : 10, filter: reduceMotion ? "blur(0px)" : "blur(2px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} exit={{ opacity: 0, y: reduceMotion ? 0 : -5, filter: reduceMotion ? "blur(0px)" : "blur(2px)" }} transition={{ duration: reduceMotion ? 0 : 0.24, ease: [0.22, 1, 0.36, 1] }} className="mx-auto w-full max-w-[1500px] p-5 md:p-8 lg:p-10"><Outlet /></motion.main>
         </AnimatePresence>
       </section>
     </div>
