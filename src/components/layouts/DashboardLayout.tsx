@@ -3,7 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Activity, BarChart3, Bot, ChevronLeft, ChevronRight, Lightbulb, LogOut, Menu, Settings, Users, UserRound, X } from "lucide-react";
+import { Activity, BarChart3, Bot, ChevronLeft, ChevronRight, Lightbulb, Loader2, LogOut, Menu, Settings, Users, UserRound, X } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
@@ -23,6 +23,7 @@ export default function DashboardLayout() {
   const [user, setUser] = useState<User | null>(null);
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [checkingWorkspace, setCheckingWorkspace] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
   const reduceMotion = useReducedMotion();
@@ -43,11 +44,30 @@ export default function DashboardLayout() {
     return () => { mounted = false; subscription.unsubscribe(); };
   }, [navigate]);
 
+  useEffect(() => {
+    if (!user) return;
+    let active = true;
+    void supabase.from("profiles").select("onboarding_completed_at").eq("user_id", user.id).maybeSingle()
+      .then(({ data, error }) => {
+        if (!active) return;
+        if (error) {
+          console.error("Could not check onboarding status:", error);
+          toast({ title: "Could not check your setup", description: "Apply the latest Supabase migration to enable personalized onboarding.", variant: "destructive" });
+        } else if (!data?.onboarding_completed_at) {
+          navigate("/onboarding", { replace: true });
+        }
+        setCheckingWorkspace(false);
+      });
+    return () => { active = false; };
+  }, [user?.id, navigate, toast]);
+
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) toast({ title: "Could not sign out", description: error.message, variant: "destructive" });
     else navigate("/");
   };
+
+  if (checkingWorkspace || !user) return <div className="grid min-h-screen place-items-center bg-background"><Loader2 className="h-6 w-6 animate-spin text-primary" aria-label="Opening your workspace" /></div>;
 
   return (
     <div className="min-h-screen bg-background text-foreground md:flex">

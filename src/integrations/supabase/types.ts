@@ -115,25 +115,55 @@ export type Database = {
       profiles: {
         Row: {
           company_name: string | null
+          company_stage: string | null
+          company_type: string | null
           created_at: string
+          biggest_challenge: string | null
           full_name: string | null
           id: string
+          industry: string | null
+          monthly_revenue_range: string | null
+          onboarding_completed_at: string | null
+          primary_goal: string | null
+          product_or_service: string | null
+          target_customer: string | null
+          team_size: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           company_name?: string | null
+          company_stage?: string | null
+          company_type?: string | null
           created_at?: string
+          biggest_challenge?: string | null
           full_name?: string | null
           id?: string
+          industry?: string | null
+          monthly_revenue_range?: string | null
+          onboarding_completed_at?: string | null
+          primary_goal?: string | null
+          product_or_service?: string | null
+          target_customer?: string | null
+          team_size?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           company_name?: string | null
+          company_stage?: string | null
+          company_type?: string | null
           created_at?: string
+          biggest_challenge?: string | null
           full_name?: string | null
           id?: string
+          industry?: string | null
+          monthly_revenue_range?: string | null
+          onboarding_completed_at?: string | null
+          primary_goal?: string | null
+          product_or_service?: string | null
+          target_customer?: string | null
+          team_size?: string | null
           updated_at?: string
           user_id?: string
         }

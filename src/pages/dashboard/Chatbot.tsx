@@ -34,6 +34,7 @@ export default function Chatbot() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [selectedBot, setSelectedBot] = useState<string>("");
+  const [businessContext, setBusinessContext] = useState("");
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [conversationReady, setConversationReady] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -46,6 +47,23 @@ export default function Chatbot() {
       if (!user) {
         toast({ title: "Sign in required", description: "Please sign in again to start a saved conversation.", variant: "destructive" });
         return;
+      }
+
+      const { data: companyProfile } = await supabase.from("profiles")
+        .select("company_name,company_type,company_stage,industry,product_or_service,target_customer,primary_goal,biggest_challenge")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (companyProfile) {
+        setBusinessContext([
+          ["Company/project", companyProfile.company_name],
+          ["Organization type", companyProfile.company_type],
+          ["Stage", companyProfile.company_stage],
+          ["Industry", companyProfile.industry],
+          ["What they are building", companyProfile.product_or_service],
+          ["Target customer", companyProfile.target_customer],
+          ["Primary 90-day goal", companyProfile.primary_goal],
+          ["Current challenge", companyProfile.biggest_challenge],
+        ].filter(([, value]) => Boolean(value)).map(([label, value]) => `${label}: ${value}`).join("\n"));
       }
       
       // Resume the latest conversation so saved messages are still visible after reload.
@@ -173,7 +191,8 @@ export default function Chatbot() {
           message: messageText,
           conversationHistory,
           selectedBot,
-          conversationId
+          conversationId,
+          businessContext,
         },
         headers: { Authorization: `Bearer ${session.access_token}` },
       });

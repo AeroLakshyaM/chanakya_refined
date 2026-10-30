@@ -14,6 +14,7 @@ import Profile from "./pages/dashboard/Profile";
 import Settings from "./pages/dashboard/Settings";
 import NotFound from "./pages/NotFound";
 import Overview from "./pages/dashboard/Overview";
+import Onboarding from "./pages/Onboarding";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +27,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/dashboard" element={<DashboardLayout />}>
             <Route index element={<Overview />} />
             <Route path="chatbot" element={<Chatbot />} />

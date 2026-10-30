@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowRight, BarChart3, Compass, Loader2, Sparkles } from "lucide-react";
 import PageHeader from "@/components/dashboard/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,27 @@ export default function MarketAnalysis() {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
+  useEffect(() => {
+    const loadCompanyContext = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase.from("profiles")
+        .select("company_name,industry,product_or_service,target_customer,primary_goal,biggest_challenge")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (!data) return;
+      setCompany((current) => current || data.company_name || data.product_or_service || "");
+      setMarket((current) => current || data.industry || "");
+      setContext((current) => current || [
+        data.product_or_service && `What we're building: ${data.product_or_service}`,
+        data.target_customer && `Target customer: ${data.target_customer}`,
+        data.primary_goal && `90-day goal: ${data.primary_goal}`,
+        data.biggest_challenge && `Current challenge: ${data.biggest_challenge}`,
+      ].filter(Boolean).join("\n"));
+    };
+    void loadCompanyContext();
+  }, []);
+
   const runAnalysis = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setLoading(true);
@@ -25,7 +46,7 @@ export default function MarketAnalysis() {
       if (sessionError || !session?.access_token) throw new Error("Please sign in again before generating a market brief.");
       const prompt = `Create an initial market strategy brief using only the information supplied below. Do not invent market sizes, growth rates, competitor facts, or citations. Mark unknowns as assumptions and end with the most useful validation steps.\n\nCompany or product: ${company}\nMarket: ${market}\nContext: ${context || "No additional context supplied."}\n\nUse these headings: Market framing; Likely customer segments; Competitors to investigate; Key assumptions; Three practical validation steps; Questions for the team.`;
       const { data, error } = await supabase.functions.invoke("ai-advisors", {
-        body: { message: prompt, conversationHistory: [], selectedBot: "Business Strategist" },
+        body: { message: prompt, conversationHistory: [], selectedBot: "Business Strategist", businessContext: context },
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       if (error) {
