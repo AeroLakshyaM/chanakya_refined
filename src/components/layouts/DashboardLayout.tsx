@@ -3,7 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Activity, BarChart3, Bot, ChevronLeft, ChevronRight, Lightbulb, Loader2, LogOut, Menu, Settings, Target, Users, UserRound, X, SearchCheck, BookOpenCheck, Gauge } from "lucide-react";
+import { Activity, BarChart3, Bot, ChevronLeft, ChevronRight, Lightbulb, Loader2, LogOut, Menu, Settings, Target, Users, UserRound, X, SearchCheck, BookOpenCheck, Gauge, GitBranch } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import BrandLogo from "@/components/BrandLogo";
@@ -11,6 +11,7 @@ import BrandLogo from "@/components/BrandLogo";
 const navItems = [
   { path: "/dashboard", label: "Overview", icon: BarChart3, end: true },
   { path: "/dashboard/memory", label: "Workspace Memory", icon: BookOpenCheck },
+  { path: "/dashboard/intelligence", label: "Workspace Intelligence", icon: GitBranch },
   { path: "/dashboard/chatbot", label: "AI Advisors", icon: Bot },
   { path: "/dashboard/market-analysis", label: "Market Analysis", icon: Activity },
   { path: "/dashboard/product-ideas", label: "Product Ideas", icon: Lightbulb },

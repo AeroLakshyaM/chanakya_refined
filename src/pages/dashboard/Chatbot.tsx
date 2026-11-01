@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +18,7 @@ type Message = {
   timestamp: Date;
 };
 type Conversation = { id: string; title: string | null; updated_at: string };
+type MemoryChoice = { id: string; title: string; category: string; content: string; source_label: string; source_date: string | null; last_confirmed_at: string };
 
 const botPersonas = [
   { name: "Business Strategist", color: "", icon: "BS", description: "Strategic planning & growth" },
@@ -36,6 +38,14 @@ export default function Chatbot() {
   const [selectedBot, setSelectedBot] = useState<string>("");
   const [responseStyle, setResponseStyle] = useState<"natural" | "decision_brief">("natural");
   const [businessContext, setBusinessContext] = useState("");
+  const [memoryChoices, setMemoryChoices] = useState<MemoryChoice[]>([]);
+  const [memorySelection, setMemorySelection] = useState<string[] | null>(null);
+  const [includeProfile, setIncludeProfile] = useState(true);
+  const [roundtable, setRoundtable] = useState(false);
+  const [usedSources, setUsedSources] = useState<{ title: string; source_label: string; source_date: string | null; category: string }[]>([]);
+  const location = useLocation();
+  const reviewContext = (location.state as { confirmedWorkspaceContext?: string; contextSources?: { kind: string; title: string; date: string; href: string }[] } | null)?.confirmedWorkspaceContext || "";
+  const contextSources = (location.state as { contextSources?: { kind: string; title: string; date: string; href: string }[] } | null)?.contextSources || [];
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [conversationReady, setConversationReady] = useState(false);
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -67,6 +77,8 @@ export default function Chatbot() {
           ["Current challenge", companyProfile.biggest_challenge],
         ].filter(([, value]) => Boolean(value)).map(([label, value]) => `${label}: ${value}`).join("\n"));
       }
+      const { data: memories } = await (supabase as any).from("workspace_memories").select("id,title,category,content,source_label,source_date,last_confirmed_at").eq("user_id", user.id).eq("include_in_ai", true).order("updated_at", { ascending: false }).limit(100);
+      setMemoryChoices((memories || []) as MemoryChoice[]);
       
       // Keep every conversation in history and reopen the most recently active one.
       const { data: history, error: lookupError } = await supabase
@@ -191,7 +203,7 @@ export default function Chatbot() {
 
   const handleSend = async () => {
     if (!input.trim() || loading || !conversationReady || !conversationId) return;
-    if (!selectedBot) {
+    if (!selectedBot && !roundtable) {
       toast({
         title: "Select a Bot",
         description: "Please select a bot persona before sending a message",
@@ -229,10 +241,14 @@ export default function Chatbot() {
         body: {
           message: messageText,
           conversationHistory,
-          selectedBot,
+          selectedBot: roundtable ? "Business Strategist" : selectedBot,
           conversationId,
-          businessContext,
+          businessContext: includeProfile ? businessContext : "",
           responseStyle,
+          memoryIds: memorySelection ?? memoryChoices.slice(0, 8).map((memory) => memory.id),
+          includeProfile,
+          roundtable,
+          confirmedWorkspaceContext: reviewContext,
         },
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
@@ -255,6 +271,7 @@ export default function Chatbot() {
       };
 
       setMessages((prev) => [...prev, aiMessage]);
+      setUsedSources(data.sources || []);
       const { data: refreshedHistory } = await supabase.from("chat_conversations").select("id,title,updated_at").order("updated_at", { ascending: false }).limit(100);
       if (refreshedHistory) setConversations(refreshedHistory);
     } catch (error: any) {
@@ -280,11 +297,17 @@ export default function Chatbot() {
   };
 
   const activeBot = botPersonas.find((bot) => bot.name === selectedBot);
+  const recommendedMemories = [...memoryChoices].sort((a, b) => {
+    const terms = input.toLowerCase().split(/\W+/).filter((word) => word.length > 2);
+    const rank = (memory: MemoryChoice) => terms.reduce((score, term) => score + Number(`${memory.title} ${memory.content} ${memory.category}`.toLowerCase().includes(term)), 0);
+    return rank(b) - rank(a);
+  }).slice(0, 8);
+  const activeMemoryIds = memorySelection ?? recommendedMemories.map((memory) => memory.id);
   const userTurns = messages.filter((message) => message.role === "user").length;
   const suggestions = ["Help me pick one growth priority for this quarter", "What should I validate before I invest more?", "Turn my biggest challenge into a practical plan"];
 
   return <div className="chat-page min-w-0">
-    <PageHeader eyebrow="Think it through" title="Advisor desk" description="Bring the real question. Choose a perspective, and work toward a clear next move." action={<div className="hidden items-center gap-2 border border-border px-3 py-2 text-xs text-muted-foreground sm:flex"><span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />Private workspace</div>} />
+    <PageHeader eyebrow="Think it through" title="Advisor desk" description="Bring the real question. Choose one specialist or invite a roundtable, with the context you approve." action={<div className="hidden items-center gap-2 border border-border px-3 py-2 text-xs text-muted-foreground sm:flex"><span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />Private workspace</div>} />
 
     <div className="grid min-w-0 gap-5 xl:grid-cols-[260px_minmax(0,1fr)]">
       <aside className="chat-advisors min-w-0 border border-border bg-card p-4 sm:p-5">
@@ -306,9 +329,13 @@ export default function Chatbot() {
           })}
         </div>
 
+        <button type="button" onClick={() => setRoundtable((value) => !value)} aria-pressed={roundtable} className={`mt-3 w-full border p-3 text-left transition-colors ${roundtable ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"}`}><span className="flex items-center gap-2 text-xs font-medium"><Sparkles size={14} className="text-primary" />Cross-advisor roundtable</span><span className="mt-1 block text-[10px] leading-relaxed text-muted-foreground">{roundtable ? "On · moderated comparison of specialist lenses, not independent model calls" : "Optional · compare strategy, finance, product, operations, and marketing views"}</span></button>
+
+        <div className="mt-4 border border-border bg-background p-3"><div className="flex items-center justify-between"><p className="text-[10px] font-medium uppercase tracking-[0.13em] text-muted-foreground">Using context</p><button type="button" onClick={() => setMemorySelection([])} className="text-[10px] text-primary">Use current message only</button></div><label className="mt-2 flex items-center gap-2 text-xs"><input type="checkbox" checked={includeProfile} onChange={(event) => setIncludeProfile(event.target.checked)} className="accent-primary" />Company profile</label><div className="mt-2 max-h-36 space-y-1 overflow-y-auto">{recommendedMemories.map((memory) => <label key={memory.id} className="flex cursor-pointer items-start gap-2 py-1 text-[10px] leading-relaxed"><input type="checkbox" checked={activeMemoryIds.includes(memory.id)} onChange={(event) => setMemorySelection((current) => { const base = current ?? recommendedMemories.map((item) => item.id); return event.target.checked ? [...base, memory.id] : base.filter((id) => id !== memory.id); })} className="mt-0.5 accent-primary" /><span><span className="font-medium">{memory.title}</span><span className="block text-muted-foreground">{memory.source_label}{memory.source_date ? ` · ${memory.source_date}` : ""}</span></span></label>)}{!recommendedMemories.length && <p className="text-[10px] text-muted-foreground">No advisor-enabled memory yet. Manage it in Workspace Memory.</p>}</div><p className="mt-2 text-[10px] text-muted-foreground">Review or uncheck any source before sending.</p></div>
+
         <div className="mt-4 border-t border-border pt-4">
           <div className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.13em] text-muted-foreground"><LockKeyhole size={12} className="text-primary" />Private by default</div>
-          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">All advisors share this thread, so you can switch perspectives without repeating context. {businessContext ? "Your company notes are included too." : "Add company context to your profile for more tailored advice."}</p>
+          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">Each reply sees the shared conversation. Saved context above is selected for this request only.</p>
         </div>
       </aside>
 
@@ -316,13 +343,14 @@ export default function Chatbot() {
         <div className="flex min-h-[76px] items-center justify-between gap-4 border-b border-border px-4 py-3 sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <motion.div key={activeBot?.name || "none"} initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.2 }} className="grid h-10 w-10 shrink-0 place-items-center bg-foreground text-background"><Sparkles size={17} className="text-primary" /></motion.div>
-            <div className="min-w-0"><AnimatePresence mode="wait" initial={false}><motion.div key={activeBot?.name || "choose"} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.16 }}><h2 className="truncate text-sm font-medium sm:text-base">{activeBot?.name || "Choose your advisor"}</h2><p className="mt-0.5 truncate text-xs text-muted-foreground">{activeBot ? `${activeBot.description} · shared advisor thread` : "Pick a specialist to begin the conversation"}</p></motion.div></AnimatePresence></div>
+            <div className="min-w-0"><AnimatePresence mode="wait" initial={false}><motion.div key={roundtable ? "roundtable" : activeBot?.name || "choose"} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.16 }}><h2 className="truncate text-sm font-medium sm:text-base">{roundtable ? "Cross-advisor roundtable" : activeBot?.name || "Choose your advisor"}</h2><p className="mt-0.5 truncate text-xs text-muted-foreground">{roundtable ? "Separate perspectives · evidence needed · founder decides" : activeBot ? `${activeBot.description} · shared advisor thread` : "Pick a specialist to begin the conversation"}</p></motion.div></AnimatePresence></div>
           </div>
           <div className="flex shrink-0 items-center gap-2 text-[10px] text-muted-foreground sm:text-xs"><span className="grid h-7 w-7 place-items-center border border-border"><MessageSquareText size={13} /></span><span className="hidden sm:inline">Saved automatically</span></div>
         </div>
 
         <ScrollArea ref={scrollRef} className="min-h-0 min-w-0 flex-1 px-3 py-5 sm:px-6 sm:py-7">
           <div className="mx-auto max-w-3xl space-y-5">
+            {(usedSources.length > 0 || contextSources.length > 0) && <div className="border border-primary/25 bg-primary/[0.035] p-3"><p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Sources used in the last answer</p><div className="mt-2 flex flex-wrap gap-2">{contextSources.map((source, index) => <span key={`review-${index}`} className="border border-border bg-background px-2 py-1 text-[10px]">{source.kind} · {source.title}</span>)}{usedSources.map((source, index) => <span key={`memory-${index}`} className="border border-border bg-background px-2 py-1 text-[10px]">{source.title} · {source.source_label}{source.source_date ? ` · ${source.source_date}` : ""}</span>)}</div></div>}
             {messages.map((message, index) => <motion.div key={message.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.24, delay: Math.min(index * 0.025, 0.12), ease: "easeOut" }} className={`flex w-full min-w-0 items-start gap-3 ${message.role === "user" ? "justify-end" : ""}`}>
               {message.role === "assistant" && <span className="mt-1 grid h-8 w-8 shrink-0 place-items-center border border-border bg-card"><Bot size={16} className="text-primary" /></span>}
               <div className={`min-w-0 max-w-[calc(100%-2.75rem)] sm:max-w-[82%] ${message.role === "user" ? "order-first" : ""}`}>
@@ -349,9 +377,9 @@ export default function Chatbot() {
         <div className="border-t border-border bg-card/70 p-3 sm:p-5">
           <form onSubmit={(event) => { event.preventDefault(); void handleSend(); }} className="mx-auto max-w-3xl">
             <div className="mb-2 flex items-center justify-between gap-3"><span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Answer style</span><div className="flex border border-border p-0.5"><button type="button" aria-pressed={responseStyle === "natural"} onClick={() => setResponseStyle("natural")} className={`px-2.5 py-1 text-[10px] ${responseStyle === "natural" ? "bg-foreground text-background" : "text-muted-foreground"}`}>Natural</button><button type="button" aria-pressed={responseStyle === "decision_brief"} onClick={() => setResponseStyle("decision_brief")} className={`px-2.5 py-1 text-[10px] ${responseStyle === "decision_brief" ? "bg-foreground text-background" : "text-muted-foreground"}`}>Decision brief</button></div></div>
-            <div className={`flex items-center gap-2 border bg-background p-1.5 pl-3 transition-colors focus-within:border-foreground ${!selectedBot ? "opacity-70" : ""}`}>
-              <Input value={input} onChange={(event) => setInput(event.target.value)} placeholder={!conversationReady ? "Preparing your saved conversation…" : selectedBot ? `Message ${selectedBot}…` : "Choose an advisor to begin"} disabled={loading || !selectedBot || !conversationReady} aria-label="Message your advisor" className="h-11 min-w-0 flex-1 border-0 bg-transparent px-1 shadow-none focus-visible:ring-0" />
-              <button type="submit" disabled={loading || !selectedBot || !conversationReady || !input.trim()} aria-label="Send message" className="grid h-10 w-10 shrink-0 place-items-center bg-foreground text-background transition-all duration-200 hover:bg-primary hover:text-primary-foreground disabled:pointer-events-none disabled:opacity-35"><Send size={16} /></button>
+            <div className={`flex items-center gap-2 border bg-background p-1.5 pl-3 transition-colors focus-within:border-foreground ${!selectedBot && !roundtable ? "opacity-70" : ""}`}>
+              <Input value={input} onChange={(event) => setInput(event.target.value)} placeholder={!conversationReady ? "Preparing your saved conversation…" : roundtable ? "Ask all perspectives the same question…" : selectedBot ? `Message ${selectedBot}…` : "Choose an advisor to begin"} disabled={loading || (!selectedBot && !roundtable) || !conversationReady} aria-label="Message your advisor" className="h-11 min-w-0 flex-1 border-0 bg-transparent px-1 shadow-none focus-visible:ring-0" />
+              <button type="submit" disabled={loading || (!selectedBot && !roundtable) || !conversationReady || !input.trim()} aria-label="Send message" className="grid h-10 w-10 shrink-0 place-items-center bg-foreground text-background transition-all duration-200 hover:bg-primary hover:text-primary-foreground disabled:pointer-events-none disabled:opacity-35"><Send size={16} /></button>
             </div>
             <div className="mt-2 flex items-center justify-between gap-3 px-1"><p className="text-[10px] text-muted-foreground">AI can miss details. Check important decisions.</p><p className="flex shrink-0 items-center gap-1 text-[10px] text-muted-foreground"><LockKeyhole size={10} /> Your workspace</p></div>
           </form>
