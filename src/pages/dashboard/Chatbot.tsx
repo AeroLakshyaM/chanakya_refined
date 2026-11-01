@@ -107,8 +107,8 @@ export default function Chatbot() {
           .from('chat_messages')
           .select('id, role, content, advisor, created_at')
           .eq('conversation_id', activeConversationId)
-          .order('created_at', { ascending: true })
-          .limit(200);
+          .order('created_at', { ascending: false })
+          .limit(500);
 
         if (messagesError) {
           console.error('Error loading saved messages:', messagesError);
@@ -116,7 +116,7 @@ export default function Chatbot() {
           return;
         }
 
-        const restoredMessages: Message[] = (savedMessages || []).map((message) => ({
+        const restoredMessages: Message[] = (savedMessages || []).reverse().map((message) => ({
           id: message.id,
           role: message.role as Message["role"],
           content: message.content,
@@ -169,13 +169,13 @@ export default function Chatbot() {
     setConversationReady(false);
     const { data, error } = await supabase.from("chat_messages")
       .select("id,role,content,advisor,created_at").eq("conversation_id", conversation.id)
-      .order("created_at", { ascending: true }).limit(200);
+      .order("created_at", { ascending: false }).limit(500);
     if (error) {
       toast({ title: "Could not open this chat", description: error.message, variant: "destructive" });
       setConversationReady(true);
       return;
     }
-    const restored = (data || []).map((message) => ({ id: message.id, role: message.role as Message["role"], content: message.content, advisor: message.advisor || undefined, timestamp: new Date(message.created_at) }));
+    const restored = (data || []).reverse().map((message) => ({ id: message.id, role: message.role as Message["role"], content: message.content, advisor: message.advisor || undefined, timestamp: new Date(message.created_at) }));
     setConversationId(conversation.id);
     setMessages(restored.length ? restored : [{ id: `welcome-${conversation.id}`, role: "assistant", content: "Welcome back. Pick up where you left off, or start a fresh conversation.", timestamp: new Date() }]);
     const advisor = [...restored].reverse().find((message) => message.advisor)?.advisor;
@@ -306,7 +306,7 @@ export default function Chatbot() {
 
         <div className="mt-4 border-t border-border pt-4">
           <div className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.13em] text-muted-foreground"><LockKeyhole size={12} className="text-primary" />Private by default</div>
-          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{businessContext ? "Your company notes are shared with the advisor to make answers more relevant." : "Add company context to your profile for more tailored advice."}</p>
+          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">All advisors share this thread, so you can switch perspectives without repeating context. {businessContext ? "Your company notes are included too." : "Add company context to your profile for more tailored advice."}</p>
         </div>
       </aside>
 
@@ -314,7 +314,7 @@ export default function Chatbot() {
         <div className="flex min-h-[76px] items-center justify-between gap-4 border-b border-border px-4 py-3 sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <motion.div key={activeBot?.name || "none"} initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.2 }} className="grid h-10 w-10 shrink-0 place-items-center bg-foreground text-background"><Sparkles size={17} className="text-primary" /></motion.div>
-            <div className="min-w-0"><AnimatePresence mode="wait" initial={false}><motion.div key={activeBot?.name || "choose"} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.16 }}><h2 className="truncate text-sm font-medium sm:text-base">{activeBot?.name || "Choose your advisor"}</h2><p className="mt-0.5 truncate text-xs text-muted-foreground">{activeBot?.description || "Pick a specialist to begin the conversation"}</p></motion.div></AnimatePresence></div>
+            <div className="min-w-0"><AnimatePresence mode="wait" initial={false}><motion.div key={activeBot?.name || "choose"} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.16 }}><h2 className="truncate text-sm font-medium sm:text-base">{activeBot?.name || "Choose your advisor"}</h2><p className="mt-0.5 truncate text-xs text-muted-foreground">{activeBot ? `${activeBot.description} · shared advisor thread` : "Pick a specialist to begin the conversation"}</p></motion.div></AnimatePresence></div>
           </div>
           <div className="flex shrink-0 items-center gap-2 text-[10px] text-muted-foreground sm:text-xs"><span className="grid h-7 w-7 place-items-center border border-border"><MessageSquareText size={13} /></span><span className="hidden sm:inline">Saved automatically</span></div>
         </div>
