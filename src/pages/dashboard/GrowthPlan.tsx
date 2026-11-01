@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { format, formatDistanceToNow, isBefore, startOfToday } from "date-fns";
+import { format, formatDistanceToNow, isBefore, startOfToday, startOfWeek } from "date-fns";
 import { ArrowRight, CalendarDays, Check, Circle, CirclePlus, Compass, Loader2, Plus, Target, Trash2, X } from "lucide-react";
 import PageHeader from "@/components/dashboard/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { useToast } from "@/hooks/use-toast";
+const db = supabase as any;
 
 type GrowthAction = Database["public"]["Tables"]["growth_actions"]["Row"];
 const categories = ["Customers", "Product", "Revenue", "Operations", "Team", "Focus"];
@@ -32,6 +33,9 @@ export default function GrowthPlan() {
   const [details, setDetails] = useState("");
   const [category, setCategory] = useState("Focus");
   const [dueDate, setDueDate] = useState("");
+  const [review, setReview] = useState({ done: "", delayed: "", learned: "", next_week: "" });
+  const [reviewSaving, setReviewSaving] = useState(false);
+  const weekStart = format(startOfWeek(new Date(), { weekStartsOn: 1 }), "yyyy-MM-dd");
   const { toast } = useToast();
 
   const load = useCallback(async () => {
@@ -43,14 +47,16 @@ export default function GrowthPlan() {
       return;
     }
     setUserId(user.id);
-    const [planResult, profileResult] = await Promise.all([
+    const [planResult, profileResult, reviewResult] = await Promise.all([
       supabase.from("growth_actions").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
       supabase.from("profiles").select("primary_goal").eq("user_id", user.id).maybeSingle(),
+      db.from("growth_weekly_reviews").select("done,delayed,learned,next_week").eq("user_id", user.id).eq("week_start", weekStart).maybeSingle(),
     ]);
     if (planResult.error) toast({ title: "Could not load your growth plan", description: planResult.error.message, variant: "destructive" });
     else setActions(planResult.data ?? []);
     if (profileResult.error) toast({ title: "Could not load your north star", description: profileResult.error.message, variant: "destructive" });
     else setNorthStar(profileResult.data?.primary_goal ?? "");
+    if (reviewResult.data) setReview({ done: reviewResult.data.done || "", delayed: reviewResult.data.delayed || "", learned: reviewResult.data.learned || "", next_week: reviewResult.data.next_week || "" });
     setLoading(false);
   }, [toast]);
 
@@ -102,7 +108,7 @@ export default function GrowthPlan() {
   };
 
   const changeStatus = async (action: GrowthAction, status: string) => {
-    const { data, error } = await supabase.from("growth_actions").update({ status }).eq("id", action.id).select("*").single();
+    const { data, error } = await db.from("growth_actions").update({ status, completed_at: status === "Done" ? new Date().toISOString() : null }).eq("id", action.id).select("*").single();
     if (error) toast({ title: "Could not update this action", description: error.message, variant: "destructive" });
     else setActions((current) => current.map((item) => item.id === action.id ? data : item));
   };
@@ -111,6 +117,14 @@ export default function GrowthPlan() {
     const { error } = await supabase.from("growth_actions").delete().eq("id", action.id);
     if (error) toast({ title: "Could not remove this action", description: error.message, variant: "destructive" });
     else setActions((current) => current.filter((item) => item.id !== action.id));
+  };
+
+  const saveReview = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault(); if (!userId) return; setReviewSaving(true);
+    const { error } = await db.from("growth_weekly_reviews").upsert({ user_id: userId, week_start: weekStart, ...review }, { onConflict: "user_id,week_start" });
+    setReviewSaving(false);
+    if (error) toast({ title: "Could not save weekly review", description: error.message, variant: "destructive" });
+    else toast({ title: "Weekly review saved", description: "Your progress and next steps are recorded." });
   };
 
   return <div>
@@ -126,6 +140,8 @@ export default function GrowthPlan() {
       <div className="flex items-start gap-4 border border-border bg-card p-5 sm:p-6"><span className="grid h-10 w-10 shrink-0 place-items-center bg-foreground text-background"><Target size={18} className="text-primary" /></span><div className="min-w-0"><p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Your 90-day north star</p><h2 className="mt-2 text-xl font-medium tracking-tight">{northStar || "Choose a priority to give your plan direction"}</h2>{!northStar && <p className="mt-2 text-sm text-muted-foreground">Update your company profile to set a focus for this quarter.</p>}</div></div>
       <div className="flex items-start gap-3 border border-border bg-background p-5"><Compass size={17} className="mt-0.5 shrink-0 text-primary" /><p className="text-sm leading-relaxed text-muted-foreground">A plan is a set of bets, not a promise. Review what you learn and change course when the evidence points somewhere new.</p></div>
     </section>
+
+    <form onSubmit={saveReview} className="mb-8 border border-border bg-card p-5 sm:p-6"><div className="mb-4"><p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Week of {format(new Date(`${weekStart}T00:00:00`), "MMM d")}</p><h2 className="mt-1 text-xl font-medium">A short weekly review</h2><p className="mt-1 text-sm text-muted-foreground">Keep the plan connected to what actually happened.</p></div><div className="grid gap-4 sm:grid-cols-2">{([ ["done", "What got done?"], ["delayed", "What was delayed?"], ["learned", "What did you learn?"], ["next_week", "What comes next week?"] ] as const).map(([key, label]) => <div key={key} className="space-y-2"><Label htmlFor={`review-${key}`}>{label}</Label><Textarea id={`review-${key}`} value={review[key]} onChange={(event) => setReview((current) => ({ ...current, [key]: event.target.value }))} rows={2} maxLength={1200} /></div>)}</div><Button type="submit" disabled={reviewSaving || !userId} variant="outline" className="mt-4 rounded-none">{reviewSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Save weekly review</Button></form>
 
     {formOpen && <form onSubmit={createAction} className="mb-8 grid gap-5 border border-border bg-card p-5 sm:grid-cols-2 sm:p-6"><div className="sm:col-span-2"><h2 className="text-lg font-medium">Add a founder action</h2><p className="mt-1 text-sm text-muted-foreground">Write one concrete step you can take, then track what happens.</p></div><div className="space-y-2"><Label htmlFor="growth-title">Action</Label><Input id="growth-title" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={160} required autoFocus placeholder="e.g. Interview five target customers" /></div><div className="space-y-2"><Label>Area</Label><Select value={category} onValueChange={setCategory}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{categories.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent></Select></div><div className="space-y-2 sm:col-span-2"><Label htmlFor="growth-details">What will you learn or move forward?</Label><Textarea id="growth-details" value={details} onChange={(event) => setDetails(event.target.value)} rows={2} maxLength={1000} placeholder="Add a little context or a success signal…" /></div><div className="space-y-2"><Label htmlFor="growth-due-date">Target date (optional)</Label><Input id="growth-due-date" type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} /></div><div className="flex items-end sm:justify-end"><Button type="submit" disabled={saving} className="h-10 w-full rounded-none bg-primary text-primary-foreground hover:bg-primary/90 sm:w-auto">{saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CirclePlus className="mr-2 h-4 w-4" />}Save action</Button></div></form>}
 

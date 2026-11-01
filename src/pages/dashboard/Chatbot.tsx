@@ -34,6 +34,7 @@ export default function Chatbot() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [selectedBot, setSelectedBot] = useState<string>("");
+  const [responseStyle, setResponseStyle] = useState<"natural" | "decision_brief">("natural");
   const [businessContext, setBusinessContext] = useState("");
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [conversationReady, setConversationReady] = useState(false);
@@ -231,6 +232,7 @@ export default function Chatbot() {
           selectedBot,
           conversationId,
           businessContext,
+          responseStyle,
         },
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
@@ -346,6 +348,7 @@ export default function Chatbot() {
 
         <div className="border-t border-border bg-card/70 p-3 sm:p-5">
           <form onSubmit={(event) => { event.preventDefault(); void handleSend(); }} className="mx-auto max-w-3xl">
+            <div className="mb-2 flex items-center justify-between gap-3"><span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Answer style</span><div className="flex border border-border p-0.5"><button type="button" aria-pressed={responseStyle === "natural"} onClick={() => setResponseStyle("natural")} className={`px-2.5 py-1 text-[10px] ${responseStyle === "natural" ? "bg-foreground text-background" : "text-muted-foreground"}`}>Natural</button><button type="button" aria-pressed={responseStyle === "decision_brief"} onClick={() => setResponseStyle("decision_brief")} className={`px-2.5 py-1 text-[10px] ${responseStyle === "decision_brief" ? "bg-foreground text-background" : "text-muted-foreground"}`}>Decision brief</button></div></div>
             <div className={`flex items-center gap-2 border bg-background p-1.5 pl-3 transition-colors focus-within:border-foreground ${!selectedBot ? "opacity-70" : ""}`}>
               <Input value={input} onChange={(event) => setInput(event.target.value)} placeholder={!conversationReady ? "Preparing your saved conversation…" : selectedBot ? `Message ${selectedBot}…` : "Choose an advisor to begin"} disabled={loading || !selectedBot || !conversationReady} aria-label="Message your advisor" className="h-11 min-w-0 flex-1 border-0 bg-transparent px-1 shadow-none focus-visible:ring-0" />
               <button type="submit" disabled={loading || !selectedBot || !conversationReady || !input.trim()} aria-label="Send message" className="grid h-10 w-10 shrink-0 place-items-center bg-foreground text-background transition-all duration-200 hover:bg-primary hover:text-primary-foreground disabled:pointer-events-none disabled:opacity-35"><Send size={16} /></button>

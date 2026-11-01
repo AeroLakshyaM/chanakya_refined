@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { ArrowRight, BarChart3, Compass, Loader2, Sparkles } from "lucide-react";
 import PageHeader from "@/components/dashboard/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import FormattedAnswer from "@/components/dashboard/FormattedAnswer";
 
+const db = supabase as unknown as SupabaseClient;
+type MarketBrief = { id: string; company: string; market: string; context: string; content: string; version: number; is_fallback: boolean; created_at: string };
+
 export default function MarketAnalysis() {
   const [company, setCompany] = useState("");
   const [market, setMarket] = useState("");
@@ -17,6 +21,7 @@ export default function MarketAnalysis() {
   const [loading, setLoading] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [analysisIsFallback, setAnalysisIsFallback] = useState(false);
+  const [briefs, setBriefs] = useState<MarketBrief[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -30,6 +35,8 @@ export default function MarketAnalysis() {
     const loadCompanyContext = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+      const { data: savedBriefs } = await db.from("market_briefs").select("id,company,market,context,content,version,is_fallback,created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(30);
+      if (savedBriefs) setBriefs(savedBriefs as MarketBrief[]);
       const { data } = await supabase.from("profiles")
         .select("company_name,industry,product_or_service,target_customer,primary_goal,biggest_challenge")
         .eq("user_id", user.id)
@@ -47,6 +54,15 @@ export default function MarketAnalysis() {
     void loadCompanyContext();
   }, []);
 
+  const saveBrief = async (content: string, isFallback: boolean) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data: latest } = await db.from("market_briefs").select("version").eq("user_id", user.id).eq("market", market.trim()).order("version", { ascending: false }).limit(1).maybeSingle();
+    const { data, error } = await db.from("market_briefs").insert({ user_id: user.id, company: company.trim(), market: market.trim(), context: context.trim(), content, version: (latest?.version ?? 0) + 1, is_fallback: isFallback }).select("id,company,market,context,content,version,is_fallback,created_at").single();
+    if (error) toast({ title: "Brief generated but not saved", description: error.message, variant: "destructive" });
+    else setBriefs((current) => [data as MarketBrief, ...current]);
+  };
+
   const runAnalysis = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setLoading(true);
@@ -55,7 +71,8 @@ export default function MarketAnalysis() {
     try {
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       if (sessionError || !session?.access_token) throw new Error("Please sign in again before generating a market brief.");
-      const prompt = `Create an initial market strategy brief using only the information supplied below. Do not invent market sizes, growth rates, competitor facts, or citations. Mark unknowns as assumptions and end with the most useful validation steps.\n\nCompany or product: ${company}\nMarket: ${market}\nContext: ${context || "No additional context supplied."}\n\nUse these headings: Market framing; Likely customer segments; Competitors to investigate; Key assumptions; Three practical validation steps; Questions for the team.`;
+      const previous = briefs.find((brief) => brief.market.toLowerCase() === market.trim().toLowerCase());
+      const prompt = `Create a practical market strategy brief using only the information supplied below. Do not invent market sizes, growth rates, competitor facts, or citations. Clearly distinguish founder-supplied facts from hypotheses and unknowns. Describe alternatives or competitors as things to investigate unless the user supplied evidence.\n\nCompany or product: ${company}\nMarket: ${market}\nContext: ${context || "No additional context supplied."}${previous ? `\n\nPrevious version (v${previous.version}) for comparison:\n${previous.content.slice(0, 7000)}\n\nAdd a short “What changed” section. Only call out changes in the supplied context or framing; do not imply the market itself changed without new evidence.` : ""}\n\nUse these headings: Market framing; Supplied facts; Customer segments and jobs; Alternatives to investigate; Assumptions and risks; Validation steps; Questions for the team${previous ? "; What changed" : ""}.`;
       const { data, error } = await supabase.functions.invoke("ai-advisors", {
         body: { message: prompt, conversationHistory: [], selectedBot: "Business Strategist", businessContext: context, provider: "nvidia", timeoutMs: 70_000 },
         headers: { Authorization: `Bearer ${session.access_token}` },
@@ -70,11 +87,12 @@ export default function MarketAnalysis() {
       }
       if (!data?.message) throw new Error("The advisor returned an empty response. Please try again.");
       setAnalysis(data.message);
+      await saveBrief(data.message, false);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "The market brief could not be generated.";
       if (message.toLowerCase().includes("timed out") || message.toLowerCase().includes("timeout")) {
         setAnalysisIsFallback(true);
-        setAnalysis([
+        const fallbackBrief = [
           "Market framing",
           `You’re exploring ${market} with ${company}. This is a working frame from your inputs, not live market research.`,
           "",
@@ -89,7 +107,9 @@ export default function MarketAnalysis() {
           "",
           "Questions for the team",
           "What evidence would show this problem is urgent? Who decides and pays? What is the smallest test you can run this week?",
-        ].join("\n"));
+        ].join("\n");
+        setAnalysis(fallbackBrief);
+        await saveBrief(fallbackBrief, true);
         toast({ title: "Showing a quick starting framework", description: "Nemotron did not respond within 70 seconds. This fallback uses your inputs and does not contain live market data." });
         return;
       }
@@ -112,5 +132,6 @@ export default function MarketAnalysis() {
         {analysis ? <div className="p-5 sm:p-8"><div className="flex items-center gap-3 border-b border-border pb-5"><span className="grid h-9 w-9 place-items-center bg-foreground text-background"><BarChart3 size={17} /></span><div><p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">{analysisIsFallback ? "Quick fallback framework" : "Working brief"}</p><h2 className="mt-1 text-lg font-medium">{company} <span className="font-normal text-muted-foreground">· {market}</span></h2></div></div><div className="py-6 text-foreground"><FormattedAnswer content={analysis} /></div><p className="border-t border-border pt-4 text-xs leading-relaxed text-muted-foreground">{analysisIsFallback ? "This framework is based only on the information you provided. It contains no live market data or verified competitor research. Try again when you’re ready for an AI-generated brief." : "This is a strategic starting point based on your description, not live market research. Validate claims with current, reliable sources before making decisions."}</p></div> : <div className="flex min-h-[420px] flex-col items-center justify-center px-8 text-center"><span className="grid h-12 w-12 place-items-center border border-border text-primary"><Sparkles size={20} /></span><h2 className="mt-5 text-xl font-medium tracking-tight">Your market brief will appear here</h2><p className="mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">Add a product and market, then generate a structured first pass with assumptions and validation steps clearly called out.</p></div>}
       </section>
     </div>
+    {briefs.length > 0 && <section className="mt-8"><div className="mb-3 flex items-end justify-between"><div><p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">Your research trail</p><h2 className="mt-1 text-lg font-medium">Saved brief versions</h2></div><span className="text-xs text-muted-foreground">Newest first</span></div><div className="divide-y divide-border border-y border-border">{briefs.map((brief) => <button type="button" key={brief.id} onClick={() => { setCompany(brief.company); setMarket(brief.market); setContext(brief.context); setAnalysis(brief.content); setAnalysisIsFallback(brief.is_fallback); }} className="flex w-full items-center justify-between gap-4 py-3 text-left hover:bg-card"><span><span className="text-sm font-medium">{brief.market} · v{brief.version}</span><span className="ml-2 text-xs text-muted-foreground">{brief.company} · {new Date(brief.created_at).toLocaleDateString()}</span></span><span className="text-[10px] uppercase tracking-wide text-muted-foreground">{brief.is_fallback ? "Starting framework" : "Brief"}</span></button>)}</div></section>}
   </div>;
 }
