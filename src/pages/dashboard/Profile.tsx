@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Building2, Loader2, Mail, UserRound } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
+import { ArrowUpRight, Building2, CalendarDays, Loader2, Mail, Target, UserRound } from "lucide-react";
 import PageHeader from "@/components/dashboard/PageHeader";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { useToast } from "@/hooks/use-toast";
+
+const db = supabase as unknown as SupabaseClient;
 
 export default function Profile() {
   const [userId, setUserId] = useState<string | null>(null);
@@ -23,12 +27,20 @@ export default function Profile() {
   const [biggestChallenge, setBiggestChallenge] = useState("");
   const [teamSize, setTeamSize] = useState("");
   const [monthlyRevenueRange, setMonthlyRevenueRange] = useState("");
+  const [goalOutcome, setGoalOutcome] = useState("");
+  const [goalBaseline, setGoalBaseline] = useState("");
+  const [goalTarget, setGoalTarget] = useState("");
+  const [goalUnit, setGoalUnit] = useState("");
+  const [goalStart, setGoalStart] = useState("");
+  const [goalEnd, setGoalEnd] = useState("");
   const [onboardingCompletedAt, setOnboardingCompletedAt] = useState<string | null>(null);
   const [conversationCount, setConversationCount] = useState<number | null>(null);
   const [ideaCount, setIdeaCount] = useState<number | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     const load = async () => {
@@ -42,12 +54,13 @@ export default function Profile() {
       setEmail(user.email ?? "");
       setFullName(user.user_metadata?.full_name ?? "");
       const [profile, conversations, ideas] = await Promise.all([
-        supabase.from("profiles").select("full_name,company_name,company_type,company_stage,industry,product_or_service,target_customer,primary_goal,biggest_challenge,team_size,monthly_revenue_range,onboarding_completed_at").eq("user_id", user.id).maybeSingle(),
+        db.from("profiles").select("full_name,company_name,company_type,company_stage,industry,product_or_service,target_customer,primary_goal,biggest_challenge,team_size,monthly_revenue_range,onboarding_completed_at,primary_goal_outcome,goal_baseline,goal_target,goal_unit,goal_period_start,goal_period_end,updated_at").eq("user_id", user.id).maybeSingle(),
         supabase.from("chat_conversations").select("id", { count: "exact", head: true }).eq("user_id", user.id),
         supabase.from("product_ideas").select("id", { count: "exact", head: true }).eq("user_id", user.id),
       ]);
       if (profile.error) toast({ title: "Could not load profile details", description: profile.error.message, variant: "destructive" });
       if (profile.data) {
+        setLastUpdated(profile.data.updated_at ?? null);
         setFullName(profile.data.full_name ?? user.user_metadata?.full_name ?? "");
         setCompanyName(profile.data.company_name ?? "");
         setCompanyType(profile.data.company_type ?? "");
@@ -59,6 +72,12 @@ export default function Profile() {
         setBiggestChallenge(profile.data.biggest_challenge ?? "");
         setTeamSize(profile.data.team_size ?? "");
         setMonthlyRevenueRange(profile.data.monthly_revenue_range ?? "");
+        setGoalOutcome(profile.data.primary_goal_outcome ?? "");
+        setGoalBaseline(profile.data.goal_baseline == null ? "" : String(profile.data.goal_baseline));
+        setGoalTarget(profile.data.goal_target == null ? "" : String(profile.data.goal_target));
+        setGoalUnit(profile.data.goal_unit ?? "");
+        setGoalStart(profile.data.goal_period_start ?? "");
+        setGoalEnd(profile.data.goal_period_end ?? "");
         setOnboardingCompletedAt(profile.data.onboarding_completed_at);
       }
       if (conversations.error) toast({ title: "Could not load conversation count", description: conversations.error.message, variant: "destructive" });
@@ -74,7 +93,7 @@ export default function Profile() {
     event.preventDefault();
     if (!userId) return;
     setSaving(true);
-    const { error: profileError } = await supabase.from("profiles").upsert({
+    const { error: profileError } = await db.from("profiles").upsert({
       user_id: userId,
       full_name: fullName.trim(),
       company_name: companyName.trim(),
@@ -88,6 +107,12 @@ export default function Profile() {
       team_size: teamSize || null,
       monthly_revenue_range: monthlyRevenueRange || null,
       onboarding_completed_at: onboardingCompletedAt,
+      primary_goal_outcome: goalOutcome.trim() || null,
+      goal_baseline: goalBaseline === "" ? null : Number(goalBaseline),
+      goal_target: goalTarget === "" ? null : Number(goalTarget),
+      goal_unit: goalUnit.trim() || null,
+      goal_period_start: goalStart || null,
+      goal_period_end: goalEnd || null,
     }, { onConflict: "user_id" });
     if (profileError) {
       toast({ title: "Could not save profile", description: profileError.message, variant: "destructive" });
@@ -106,8 +131,8 @@ export default function Profile() {
   return <div>
     <PageHeader eyebrow="Your account" title="Profile & company" description="Keep the context behind your decisions close at hand. Your profile details are private to your account." />
     <div className="grid gap-6 lg:grid-cols-12">
-      <aside className="flex flex-col items-center border border-border bg-card p-7 text-center lg:col-span-4 lg:items-start lg:text-left"><Avatar className="h-16 w-16 rounded-none"><AvatarFallback className="rounded-none bg-foreground text-lg text-background">{initials}</AvatarFallback></Avatar><h2 className="mt-5 text-xl font-medium">{fullName || "Your profile"}</h2><p className="mt-1 break-all text-sm text-muted-foreground">{email}</p><div className="mt-7 w-full border-t border-border pt-5 text-left"><p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">Workspace context</p><p className="mt-2 text-sm">{companyName || "Add your company to give advisors better context."}</p></div></aside>
-      <form onSubmit={saveProfile} className="space-y-5 border border-border bg-background p-5 sm:p-7 lg:col-span-8">
+      <motion.aside initial={reduceMotion ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reduceMotion ? 0 : 0.28 }} className="flex flex-col items-center border border-border bg-card p-7 text-center lg:col-span-4 lg:items-start lg:text-left"><Avatar className="h-16 w-16 rounded-none"><AvatarFallback className="rounded-none bg-foreground text-lg text-background">{initials}</AvatarFallback></Avatar><h2 className="mt-5 text-xl font-medium">{fullName || "Your profile"}</h2><p className="mt-1 break-all text-sm text-muted-foreground">{email}</p><div className="mt-7 w-full border-t border-border pt-5 text-left"><p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">Workspace context</p><p className="mt-2 text-sm">{companyName || "Add your company to give advisors better context."}</p>{primaryGoal && <p className="mt-4 flex items-start gap-2 text-sm"><Target size={15} className="mt-0.5 shrink-0 text-primary" /><span>{primaryGoal}{goalTarget && ` · target ${goalTarget}${goalUnit ? ` ${goalUnit}` : ""}`}</span></p>}{lastUpdated && <p className="mt-4 flex items-center gap-2 text-xs text-muted-foreground"><CalendarDays size={13} />Context updated {new Date(lastUpdated).toLocaleDateString()}</p>}</div></motion.aside>
+      <motion.form initial={reduceMotion ? false : { opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reduceMotion ? 0 : 0.32, delay: reduceMotion ? 0 : 0.06 }} onSubmit={saveProfile} className="space-y-5 border border-border bg-background p-5 sm:p-7 lg:col-span-8">
         <div className="border-b border-border pb-4"><h2 className="text-lg font-medium">Account & company context</h2><p className="mt-1 text-sm text-muted-foreground">Your answers shape the dashboard and help advisors give relevant guidance.</p></div>
         <div className="space-y-2"><Label htmlFor="profile-name"><UserRound className="mr-2 inline h-4 w-4" />Full name</Label><Input id="profile-name" value={fullName} onChange={(e) => setFullName(e.target.value)} maxLength={120} placeholder="Your name" required /></div>
         <div className="space-y-2"><Label htmlFor="profile-email"><Mail className="mr-2 inline h-4 w-4" />Email</Label><Input id="profile-email" value={email} disabled className="bg-muted" /><p className="text-xs text-muted-foreground">Email changes are managed through your authentication provider.</p></div>
@@ -120,13 +145,14 @@ export default function Profile() {
         <div className="space-y-2"><Label htmlFor="profile-offer">What are you making or offering?</Label><Textarea id="profile-offer" value={productOrService} onChange={(e) => setProductOrService(e.target.value)} maxLength={1200} rows={3} placeholder="Describe the product, service, or experience…" /></div>
         <div className="space-y-2"><Label htmlFor="profile-audience">Who do you want to help?</Label><Input id="profile-audience" value={targetCustomer} onChange={(e) => setTargetCustomer(e.target.value)} maxLength={500} placeholder="Your target customer" /></div>
         <div className="space-y-2"><Label htmlFor="profile-goal">Main goal for the next 90 days</Label><select id="profile-goal" value={primaryGoal} onChange={(e) => setPrimaryGoal(e.target.value)} className="h-10 w-full border border-input bg-background px-3 text-sm"><option value="">Choose a priority</option>{["Find my first customers", "Grow revenue", "Launch or improve a product", "Understand my market", "Make operations smoother", "Build a stronger team", "Decide what to focus on next"].map((goal) => <option key={goal} value={goal}>{goal}</option>)}</select></div>
+        <section className="space-y-4 border border-border bg-card p-4 sm:p-5"><div><p className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.13em] text-primary"><Target size={14} />Make the goal measurable</p><p className="mt-2 text-xs leading-relaxed text-muted-foreground">Choose a result you can check later. These figures stay self-reported and are only included in advisor context when you allow profile context.</p></div><div className="space-y-2"><Label htmlFor="profile-goal-outcome">What would progress look like?</Label><Input id="profile-goal-outcome" value={goalOutcome} onChange={(event) => setGoalOutcome(event.target.value)} maxLength={240} placeholder="e.g. 10 qualified customer interviews" /></div><div className="grid gap-4 sm:grid-cols-2"><div className="grid grid-cols-2 gap-3"><div className="space-y-2"><Label htmlFor="profile-baseline">Baseline</Label><Input id="profile-baseline" type="number" step="any" value={goalBaseline} onChange={(event) => setGoalBaseline(event.target.value)} /></div><div className="space-y-2"><Label htmlFor="profile-target-value">Target</Label><Input id="profile-target-value" type="number" step="any" value={goalTarget} onChange={(event) => setGoalTarget(event.target.value)} /></div></div><div className="space-y-2"><Label htmlFor="profile-goal-unit">Unit</Label><Input id="profile-goal-unit" value={goalUnit} onChange={(event) => setGoalUnit(event.target.value)} maxLength={32} placeholder="customers, %, $…" /></div><div className="space-y-2"><Label htmlFor="profile-goal-start">Period starts</Label><Input id="profile-goal-start" type="date" value={goalStart} onChange={(event) => setGoalStart(event.target.value)} /></div><div className="space-y-2"><Label htmlFor="profile-goal-end">Period ends</Label><Input id="profile-goal-end" type="date" value={goalEnd} onChange={(event) => setGoalEnd(event.target.value)} /></div></div></section>
         <div className="space-y-2"><Label htmlFor="profile-challenge">Biggest current challenge</Label><Textarea id="profile-challenge" value={biggestChallenge} onChange={(e) => setBiggestChallenge(e.target.value)} maxLength={1000} rows={2} placeholder="What is taking up the most headspace?" /></div>
         <div className="grid gap-5 sm:grid-cols-2">
           <div className="space-y-2"><Label htmlFor="profile-team">Team size (optional)</Label><select id="profile-team" value={teamSize} onChange={(e) => setTeamSize(e.target.value)} className="h-10 w-full border border-input bg-background px-3 text-sm"><option value="">Prefer not to say</option>{["Just me", "2–5", "6–15", "16–50", "51+"].map((size) => <option key={size} value={size}>{size}</option>)}</select></div>
           <div className="space-y-2"><Label htmlFor="profile-revenue">Monthly revenue range (optional)</Label><select id="profile-revenue" value={monthlyRevenueRange} onChange={(e) => setMonthlyRevenueRange(e.target.value)} className="h-10 w-full border border-input bg-background px-3 text-sm"><option value="">Prefer not to say</option>{["Pre-revenue", "Under $1k", "$1k–$10k", "$10k–$50k", "$50k+"].map((range) => <option key={range} value={range}>{range}</option>)}</select><p className="text-xs text-muted-foreground">Self-reported; not connected to financial accounts.</p></div>
         </div>
         <Button type="submit" disabled={saving} className="h-10 rounded-none bg-foreground px-5 text-background hover:bg-foreground/85">{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Save changes</Button>
-      </form>
+      </motion.form>
     </div>
     <section className="mt-8"><p className="text-xs font-medium uppercase tracking-[0.15em] text-muted-foreground">Account activity</p><div className="mt-4 grid border-l border-t border-border sm:grid-cols-2"><div className="border-b border-r border-border p-5"><p className="text-sm text-muted-foreground">Advisor conversations</p><p className="mt-4 text-3xl font-medium tracking-tight">{conversationCount ?? "—"}</p><p className="mt-1 text-xs text-muted-foreground">Saved in this account</p></div><div className="border-b border-r border-border p-5"><p className="text-sm text-muted-foreground">Product ideas</p><p className="mt-4 text-3xl font-medium tracking-tight">{ideaCount ?? "—"}</p><p className="mt-1 text-xs text-muted-foreground">In your private backlog</p></div></div></section>
   </div>;

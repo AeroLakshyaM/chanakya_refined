@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -19,6 +20,7 @@ type Message = {
 };
 type Conversation = { id: string; title: string | null; updated_at: string };
 type MemoryChoice = { id: string; title: string; category: string; content: string; source_label: string; source_date: string | null; last_confirmed_at: string };
+const db = supabase as unknown as SupabaseClient;
 
 const botPersonas = [
   { name: "Business Strategist", color: "", icon: "BS", description: "Strategic planning & growth" },
@@ -62,10 +64,11 @@ export default function Chatbot() {
       }
 
       const { data: companyProfile } = await supabase.from("profiles")
-        .select("company_name,company_type,company_stage,industry,product_or_service,target_customer,primary_goal,biggest_challenge")
+        .select("company_name,company_type,company_stage,industry,product_or_service,target_customer,primary_goal,biggest_challenge,ai_profile_context_default,ai_workspace_memory_default")
         .eq("user_id", user.id)
         .maybeSingle();
       if (companyProfile) {
+        setIncludeProfile(companyProfile.ai_profile_context_default ?? true);
         setBusinessContext([
           ["Company/project", companyProfile.company_name],
           ["Organization type", companyProfile.company_type],
@@ -77,8 +80,9 @@ export default function Chatbot() {
           ["Current challenge", companyProfile.biggest_challenge],
         ].filter(([, value]) => Boolean(value)).map(([label, value]) => `${label}: ${value}`).join("\n"));
       }
-      const { data: memories } = await (supabase as any).from("workspace_memories").select("id,title,category,content,source_label,source_date,last_confirmed_at").eq("user_id", user.id).eq("include_in_ai", true).order("updated_at", { ascending: false }).limit(100);
+      const { data: memories } = await db.from("workspace_memories").select("id,title,category,content,source_label,source_date,last_confirmed_at").eq("user_id", user.id).eq("include_in_ai", true).order("updated_at", { ascending: false }).limit(100);
       setMemoryChoices((memories || []) as MemoryChoice[]);
+      if (companyProfile?.ai_workspace_memory_default === false) setMemorySelection([]);
       
       // Keep every conversation in history and reopen the most recently active one.
       const { data: history, error: lookupError } = await supabase
@@ -274,12 +278,13 @@ export default function Chatbot() {
       setUsedSources(data.sources || []);
       const { data: refreshedHistory } = await supabase.from("chat_conversations").select("id,title,updated_at").order("updated_at", { ascending: false }).limit(100);
       if (refreshedHistory) setConversations(refreshedHistory);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error calling AI:", error);
+      const errorMessageText = error instanceof Error ? error.message : "Sorry, I encountered an error. Please try again.";
       
       toast({
         title: "Error",
-        description: error.message || "Failed to get response from AI",
+        description: errorMessageText,
         variant: "destructive"
       });
       
@@ -287,7 +292,7 @@ export default function Chatbot() {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: error.message || "Sorry, I encountered an error. Please try again.",
+        content: errorMessageText,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
@@ -331,7 +336,7 @@ export default function Chatbot() {
 
         <button type="button" onClick={() => setRoundtable((value) => !value)} aria-pressed={roundtable} className={`mt-3 w-full border p-3 text-left transition-colors ${roundtable ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"}`}><span className="flex items-center gap-2 text-xs font-medium"><Sparkles size={14} className="text-primary" />Cross-advisor roundtable</span><span className="mt-1 block text-[10px] leading-relaxed text-muted-foreground">{roundtable ? "On · moderated comparison of specialist lenses, not independent model calls" : "Optional · compare strategy, finance, product, operations, and marketing views"}</span></button>
 
-        <div className="mt-4 border border-border bg-background p-3"><div className="flex items-center justify-between"><p className="text-[10px] font-medium uppercase tracking-[0.13em] text-muted-foreground">Using context</p><button type="button" onClick={() => setMemorySelection([])} className="text-[10px] text-primary">Use current message only</button></div><label className="mt-2 flex items-center gap-2 text-xs"><input type="checkbox" checked={includeProfile} onChange={(event) => setIncludeProfile(event.target.checked)} className="accent-primary" />Company profile</label><div className="mt-2 max-h-36 space-y-1 overflow-y-auto">{recommendedMemories.map((memory) => <label key={memory.id} className="flex cursor-pointer items-start gap-2 py-1 text-[10px] leading-relaxed"><input type="checkbox" checked={activeMemoryIds.includes(memory.id)} onChange={(event) => setMemorySelection((current) => { const base = current ?? recommendedMemories.map((item) => item.id); return event.target.checked ? [...base, memory.id] : base.filter((id) => id !== memory.id); })} className="mt-0.5 accent-primary" /><span><span className="font-medium">{memory.title}</span><span className="block text-muted-foreground">{memory.source_label}{memory.source_date ? ` · ${memory.source_date}` : ""}</span></span></label>)}{!recommendedMemories.length && <p className="text-[10px] text-muted-foreground">No advisor-enabled memory yet. Manage it in Workspace Memory.</p>}</div><p className="mt-2 text-[10px] text-muted-foreground">Review or uncheck any source before sending.</p></div>
+        <div className="mt-4 border border-border bg-background p-3"><div className="flex items-center justify-between"><p className="text-[10px] font-medium uppercase tracking-[0.13em] text-muted-foreground">Using context</p><button type="button" onClick={() => { setMemorySelection([]); setIncludeProfile(false); }} className="text-[10px] text-primary">Use current question only</button></div><label className="mt-2 flex items-center gap-2 text-xs"><input type="checkbox" checked={includeProfile} onChange={(event) => setIncludeProfile(event.target.checked)} className="accent-primary" />Company profile</label><div className="mt-2 max-h-36 space-y-1 overflow-y-auto">{recommendedMemories.map((memory) => <label key={memory.id} className="flex cursor-pointer items-start gap-2 py-1 text-[10px] leading-relaxed"><input type="checkbox" checked={activeMemoryIds.includes(memory.id)} onChange={(event) => setMemorySelection((current) => { const base = current ?? recommendedMemories.map((item) => item.id); return event.target.checked ? [...base, memory.id] : base.filter((id) => id !== memory.id); })} className="mt-0.5 accent-primary" /><span><span className="font-medium">{memory.title}</span><span className="block text-muted-foreground">{memory.source_label}{memory.source_date ? ` · ${memory.source_date}` : ""}</span></span></label>)}{!recommendedMemories.length && <p className="text-[10px] text-muted-foreground">No advisor-enabled memory yet. Manage it in Workspace Memory.</p>}</div><p className="mt-2 text-[10px] text-muted-foreground">Review or uncheck any source before sending.</p></div>
 
         <div className="mt-4 border-t border-border pt-4">
           <div className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.13em] text-muted-foreground"><LockKeyhole size={12} className="text-primary" />Private by default</div>

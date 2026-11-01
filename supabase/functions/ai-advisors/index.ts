@@ -123,7 +123,7 @@ serve(async (req: Request) => {
     const contextClient = adminClient ?? userClient;
     const requestedMemoryIds = Array.isArray(memoryIds) ? memoryIds.filter((id: unknown) => typeof id === "string").slice(0, 20) : [];
     const profilePromise = includeProfile === false ? Promise.resolve({ data: null, error: null }) : contextClient.from("profiles")
-        .select("company_name,company_type,company_stage,industry,product_or_service,target_customer,primary_goal,biggest_challenge,team_size,monthly_revenue_range,updated_at")
+        .select("company_name,company_type,company_stage,industry,product_or_service,target_customer,primary_goal,biggest_challenge,team_size,monthly_revenue_range,primary_goal_outcome,goal_baseline,goal_target,goal_unit,goal_period_start,goal_period_end,updated_at")
         .eq("user_id", authenticatedUser.id).maybeSingle();
     let memoryQuery = contextClient.from("workspace_memories")
         .select("id,category,kind,title,content,source_label,source_date,source_url,last_confirmed_at")
@@ -142,6 +142,10 @@ serve(async (req: Request) => {
       ["What they offer", profile.product_or_service], ["Target customer", profile.target_customer],
       ["Current 90-day goal", profile.primary_goal], ["Current challenge", profile.biggest_challenge],
       ["Team size", profile.team_size], ["Monthly revenue range (self-reported)", profile.monthly_revenue_range],
+      ["Measurable goal outcome", profile.primary_goal_outcome],
+      ["Goal baseline", profile.goal_baseline == null ? null : `${profile.goal_baseline}${profile.goal_unit ? ` ${profile.goal_unit}` : ""}`],
+      ["Goal target", profile.goal_target == null ? null : `${profile.goal_target}${profile.goal_unit ? ` ${profile.goal_unit}` : ""}`],
+      ["Goal period", profile.goal_period_start || profile.goal_period_end ? `${profile.goal_period_start ?? "start not set"} to ${profile.goal_period_end ?? "end not set"}` : null],
     ].filter(([, value]) => typeof value === "string" && value.trim())
       .map(([label, value]) => `${label}: ${value}`) : [];
     const profileContext = profileFacts.length

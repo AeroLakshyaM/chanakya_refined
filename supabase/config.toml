@@ -2,3 +2,6 @@ project_id = "bpxmclbbvamazgkoapdm"
 
 [functions.ai-advisors]
 verify_jwt = true
+
+[functions.delete-account]
+verify_jwt = true
