@@ -1,6 +1,7 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowDown, ArrowRight, ArrowUpRight, BarChart3, Bot, Lightbulb, Users } from "lucide-react";
-import BrandLogo from "@/components/BrandLogo";
+import { ArrowDown, ArrowRight, BarChart3, Bot, Lightbulb, Users } from "lucide-react";
+import CardNav from "@/components/CardNav";
 
 const disciplines = [
   { no: "01", name: "AI advisors", detail: "Get grounded perspectives across strategy, finance, operations, product, and more.", example: "Pressure-test a decision before it becomes a plan.", icon: Bot },
@@ -20,15 +21,19 @@ function ToolSketch({ index }: { index: number }) {
 }
 
 export default function Landing() {
+  const words = ["conviction.", "momentum.", "focus.", "confidence."];
+  const [wordIndex, setWordIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setWordIndex(index => (index + 1) % words.length), 3400);
+    return () => window.clearInterval(timer);
+  }, [words.length]);
+
   return <div className="min-h-screen bg-background text-foreground">
-    <header className="mx-auto flex max-w-[1440px] items-center justify-between border-b border-border px-5 py-5 md:px-10">
-      <BrandLogo className="h-14 w-[84px]" />
-      <div className="hidden items-center gap-8 text-sm text-muted-foreground md:flex"><a className="editorial-link pb-1" href="#approach">Approach</a><a className="editorial-link pb-1" href="#tools">Tools</a><a className="editorial-link pb-1" href="#about">About</a></div>
-      <Link to="/auth" className="flex items-center gap-2 text-sm font-medium editorial-link pb-1">Sign in <ArrowUpRight size={15} /></Link>
-    </header>
+    <CardNav />
     <main className="page-enter">
       <section className="mx-auto grid max-w-[1440px] gap-12 px-5 pb-20 pt-24 md:grid-cols-12 md:px-10 md:pb-28 md:pt-36">
-        <div className="md:col-span-9"><p className="mb-7 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">A growth workspace for people building things</p><h1 className="max-w-5xl text-[clamp(3.75rem,10vw,9.5rem)] font-medium leading-[0.88] tracking-[-0.065em]">Build with clarity.<br />Grow with <span className="text-primary">conviction.</span></h1></div>
+        <div className="md:col-span-9"><p className="mb-7 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">A growth workspace for people building things</p><h1 className="max-w-5xl text-[clamp(3.75rem,10vw,9.5rem)] font-medium leading-[0.88] tracking-[-0.065em]">Build with clarity.<br />Grow with <span className="hero-rotating-word text-primary" key={words[wordIndex]} aria-live="polite">{words[wordIndex]}</span></h1></div>
         <div className="flex flex-col justify-end md:col-span-4 md:col-start-8"><p className="max-w-md text-lg leading-relaxed text-muted-foreground">A practical set of AI advisors and decision tools to help your startup find its next best move.</p><Link to="/auth" className="mt-7 flex w-fit items-center gap-3 bg-foreground px-5 py-3.5 text-sm text-background transition-colors hover:bg-primary">Start building <ArrowRight size={16} /></Link><span className="mt-5 text-xs text-muted-foreground">One workspace. Better decisions, every week.</span></div>
       </section>
       <section id="approach" className="border-y border-border bg-card">

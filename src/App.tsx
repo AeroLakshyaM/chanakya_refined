@@ -19,6 +19,7 @@ import GrowthPlan from "./pages/dashboard/GrowthPlan";
 import CustomerDiscovery from "./pages/dashboard/CustomerDiscovery";
 import DecisionJournal from "./pages/dashboard/DecisionJournal";
 import FounderPulse from "./pages/dashboard/FounderPulse";
+import CompanyPage from "./pages/CompanyPage";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +31,9 @@ const App = () => (
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Routes>
           <Route path="/" element={<Landing />} />
+          <Route path="/about" element={<CompanyPage />} />
+          <Route path="/approach" element={<CompanyPage />} />
+          <Route path="/tools" element={<CompanyPage />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/dashboard" element={<DashboardLayout />}>
