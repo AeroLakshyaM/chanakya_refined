@@ -73,6 +73,60 @@ export type Database = {
           },
         ]
       }
+      workspace_memories: {
+        Row: {
+          category: string
+          content: string
+          created_at: string
+          id: string
+          include_in_ai: boolean
+          kind: string
+          last_confirmed_at: string
+          source_date: string | null
+          source_label: string
+          source_record_id: string | null
+          source_type: string
+          source_url: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          content: string
+          created_at?: string
+          id?: string
+          include_in_ai?: boolean
+          kind?: string
+          last_confirmed_at?: string
+          source_date?: string | null
+          source_label?: string
+          source_record_id?: string | null
+          source_type?: string
+          source_url?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          content?: string
+          created_at?: string
+          id?: string
+          include_in_ai?: boolean
+          kind?: string
+          last_confirmed_at?: string
+          source_date?: string | null
+          source_label?: string
+          source_record_id?: string | null
+          source_type?: string
+          source_url?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       growth_actions: {
         Row: {
           category: string

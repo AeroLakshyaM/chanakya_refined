@@ -10,6 +10,7 @@ import BrandLogo from "@/components/BrandLogo";
 
 const navItems = [
   { path: "/dashboard", label: "Overview", icon: BarChart3, end: true },
+  { path: "/dashboard/memory", label: "Workspace Memory", icon: BookOpenCheck },
   { path: "/dashboard/chatbot", label: "AI Advisors", icon: Bot },
   { path: "/dashboard/market-analysis", label: "Market Analysis", icon: Activity },
   { path: "/dashboard/product-ideas", label: "Product Ideas", icon: Lightbulb },

@@ -20,6 +20,7 @@ import CustomerDiscovery from "./pages/dashboard/CustomerDiscovery";
 import DecisionJournal from "./pages/dashboard/DecisionJournal";
 import FounderPulse from "./pages/dashboard/FounderPulse";
 import CompanyPage from "./pages/CompanyPage";
+import WorkspaceMemory from "./pages/dashboard/WorkspaceMemory";
 
 const queryClient = new QueryClient();
 
@@ -38,6 +39,7 @@ const App = () => (
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/dashboard" element={<DashboardLayout />}>
             <Route index element={<Overview />} />
+            <Route path="memory" element={<WorkspaceMemory />} />
             <Route path="chatbot" element={<Chatbot />} />
             <Route path="meeting-room" element={<MeetingRoom />} />
             <Route path="market-analysis" element={<MarketAnalysis />} />

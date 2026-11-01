@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, ArrowUpRight, BarChart3, Bot, Building2, Compass, Lightbulb, MessageSquareText, Target, Users } from "lucide-react";
+import { ArrowRight, ArrowUpRight, BarChart3, Bot, BookOpenCheck, Building2, Compass, Lightbulb, MessageSquareText, Target, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 type WorkspaceProfile = {
@@ -18,6 +18,7 @@ type WorkspaceProfile = {
 };
 
 const tools = [
+  { title: "Workspace memory", description: "Review the context your advisors can use and keep it current.", path: "/dashboard/memory", icon: BookOpenCheck, eyebrow: "Keep context close" },
   { title: "AI advisors", description: "Talk through a decision with a specialist who knows your context.", path: "/dashboard/chatbot", icon: Bot, eyebrow: "Think it through" },
   { title: "Market analysis", description: "Frame your market, audience, and the competition to investigate.", path: "/dashboard/market-analysis", icon: BarChart3, eyebrow: "Find the signal" },
   { title: "Product ideas", description: "Capture opportunities and turn them into a focused backlog.", path: "/dashboard/product-ideas", icon: Lightbulb, eyebrow: "Shape what’s next" },
@@ -94,7 +95,7 @@ export default function Overview() {
       <div className="bg-foreground p-6 text-background sm:p-8 lg:col-span-7"><p className="text-xs font-medium uppercase tracking-[0.16em] text-background/55">A useful place to begin</p><h2 className="mt-3 max-w-xl text-3xl font-medium leading-tight tracking-[-0.04em]">{profile.primary_goal ? `Let’s make progress on “${profile.primary_goal.toLowerCase()}.”` : "Turn an open question into forward motion."}</h2><p className="mt-4 max-w-xl text-sm leading-relaxed text-background/65">Your advisors have your company context. Bring the decision on your mind and work toward one clear next step.</p><Link to="/dashboard/chatbot" className="mt-7 inline-flex h-11 items-center gap-3 bg-background px-4 text-sm font-medium text-foreground transition-colors hover:bg-primary">Talk it through <ArrowRight size={15} className="text-primary" /></Link></div>
     </section>
 
-    <section><div className="mb-5"><p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">The workspace</p><h2 className="mt-2 text-2xl font-medium tracking-tight">Tools for the work ahead</h2></div><div className="grid border-l border-t border-border sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">{tools.map(({ title, description, path, icon: Icon, eyebrow }) => <Link key={title} to={path} className="group flex min-h-[180px] flex-col border-b border-r border-border bg-background p-5 transition-colors hover:bg-card sm:p-6"><div className="flex items-center justify-between"><span className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">{eyebrow}</span><ArrowUpRight size={16} className="text-muted-foreground transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-primary" /></div><div className="mt-auto pt-8"><div className="flex items-center gap-2.5"><Icon size={18} strokeWidth={1.7} className="text-primary" /><h3 className="text-lg font-medium tracking-tight">{title}</h3></div><p className="mt-2 text-sm leading-relaxed text-muted-foreground">{description}</p></div></Link>)}</div></section>
+    <section><div className="mb-5"><p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">The workspace</p><h2 className="mt-2 text-2xl font-medium tracking-tight">Tools for the work ahead</h2></div><div className="grid border-l border-t border-border sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">{tools.map(({ title, description, path, icon: Icon, eyebrow }) => <Link key={title} to={path} className="group flex min-h-[180px] flex-col border-b border-r border-border bg-background p-5 transition-colors hover:bg-card sm:p-6"><div className="flex items-center justify-between"><span className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">{eyebrow}</span><ArrowUpRight size={16} className="text-muted-foreground transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-primary" /></div><div className="mt-auto pt-8"><div className="flex items-center gap-2.5"><Icon size={18} strokeWidth={1.7} className="text-primary" /><h3 className="text-lg font-medium tracking-tight">{title}</h3></div><p className="mt-2 text-sm leading-relaxed text-muted-foreground">{description}</p></div></Link>)}</div></section>
   </div>;
 }
 
