@@ -68,6 +68,13 @@
   @keyframes page-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
   .editorial-link { background-image: linear-gradient(#ff4f00, #ff4f00); background-position: left bottom; background-repeat: no-repeat; background-size: 0 1px; transition: background-size 300ms ease; }
   .editorial-link:hover { background-size: 100% 1px; }
+  .tool-card { animation: tool-arrive 650ms cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+  .tool-sketch { height: 132px; margin: 18px -8px 20px; overflow: hidden; color: hsl(var(--foreground) / 0.52); }
+  .tool-sketch svg { transition: transform 500ms cubic-bezier(0.2, 0.7, 0.2, 1); }
+  .tool-card:hover .tool-sketch svg { transform: translateY(-3px) scale(1.025); }
+  .tool-copy p { transition: color 260ms ease; }
+  .tool-card:hover .tool-copy > p:first-of-type { color: hsl(var(--foreground) / 0.86); }
+  @keyframes tool-arrive { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 }
 
 @media (prefers-reduced-motion: reduce) {
